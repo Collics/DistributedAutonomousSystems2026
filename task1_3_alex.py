@@ -1,7 +1,8 @@
 import numpy as np
+import networkx as nx
 import matplotlib.pyplot as plt
 from task1_1 import weightedAdj as W
-from task1_2 import phi_parabola, logistic_grad, generate_dataset, logistic_loss, misclassification_rate
+from task_1_2 import phi_parabola, logistic_grad, generate_dataset, logistic_loss, misclassification_rate
 
 G=6
 P=40 + (G % 3) * 10
@@ -56,94 +57,109 @@ def split_dataset_even_groups(X, y, N_agents,P, G, seed=42):
 # ESEMPIO DI UTILIZZO E TEST
 # ==========================================
 if __name__ == "__main__":
-    G = 6       # Group number
+    
     N = 5       # Number of agents
-    M = 500     # Dataset size
-    
-    rng = np.random.default_rng(99)
-    w_true = rng.standard_normal(3) # 3 for Parabola
-    b_true = rng.uniform(-0.5, 0.5)
-    X, y = generate_dataset(M, w_true, b_true, phi_parabola)
-    
-    # FIX: Added P to the arguments
-    agents = split_dataset_even_groups(X, y, N, P, G)
+    graph_types = {
+        1: nx.path_graph,
+        2: nx.star_graph,
+        3: nx.cycle_graph
+    }
+    M = [500,1000,1500]     # Dataset size
+    for group_id, graph_func in graph_types.items():
 
-    q = 3                   
-    d = q + 1               
-    max_iter = 2000
-    stepsize = 0.05
+        for i in M:
+            if group_id == 2:
+                G = graph_func(N - 1)
+            else:
+                G = graph_func(N)
 
-    z = np.zeros((N, d))         
-    s = np.zeros((N, d))         
-    grad_old = np.zeros((N, d))  
+            print(f"\n=== Testing with M={i} samples ===")
+            print(f"\n=== Testing with group {group_id} type of graph ===")
+            # Generazione dataset
+            rng = np.random.default_rng(99)
+            w_true = rng.standard_normal(3) # 3 for Parabola
+            b_true = rng.uniform(-0.5, 0.5)
+            X, y = generate_dataset(i, w_true, b_true, phi_parabola)
 
-    for i in range(N):
-        agents[i]['Phi'] = phi_parabola(agents[i]['X'])
+            # FIX: Added P to the arguments
+            agents = split_dataset_even_groups(X, y, N, P, G)
 
-    for i in range(N):
-        grad_old[i] = logistic_grad(z[i], agents[i]['Phi'], agents[i]['y'])
-        s[i] = grad_old[i].copy()
+            q = 3                   
+            d = q + 1               
+            max_iter = 2000
+            stepsize = 0.05
 
-    cost_history = []
-    consensus_history = []
-    grad_norm_history = [] # Added to track gradient norm
+            z = np.zeros((N, d))         
+            s = np.zeros((N, d))         
+            grad_old = np.zeros((N, d))  
 
-    print("Starting Distributed Gradient Tracking...")
-    for k in range(max_iter):
-        
-        z_new = W @ z - stepsize * s
-        
-        grad_new = np.zeros((N, d))
-        total_cost = 0
-        
-        for i in range(N):
-            grad_new[i] = logistic_grad(z_new[i], agents[i]['Phi'], agents[i]['y'])
-            # Track sum of local costs
-            total_cost += logistic_loss(z_new[i], agents[i]['Phi'], agents[i]['y'])
-            
-        s_new = W @ s + grad_new - grad_old
-        
-        z = z_new
-        s = s_new
-        grad_old = grad_new
-        
-        # --- TRACK METRICS ---
-        cost_history.append(total_cost)
-        # Norm of the stacked gradients matrix
-        grad_norm_history.append(np.linalg.norm(grad_new)) 
-        # Deviation from the mean of all agents
-        consensus_error = np.linalg.norm(z - np.mean(z, axis=0))
-        consensus_history.append(consensus_error)
+            for i in range(N):
+                agents[i]['Phi'] = phi_parabola(agents[i]['X'])
 
-    # --- EVALUATION ---
-    final_wb = np.mean(z, axis=0)
-    Phi_all = phi_parabola(X) # Map the whole dataset to evaluate
-    miss_rate = misclassification_rate(final_wb, Phi_all, y)
-    
-    print("--- Distributed Results ---")
-    print(f"Final Total Loss:      {cost_history[-1]:.4f}")
-    print(f"Final Gradient Norm:   {grad_norm_history[-1]:.2e}")
-    print(f"Consensus Error:       {consensus_history[-1]:.2e}")
-    print(f"Misclassification Rate:{miss_rate:.2f}%")
+            for i in range(N):
+                grad_old[i] = logistic_grad(z[i], agents[i]['Phi'], agents[i]['y'])
+                s[i] = grad_old[i].copy()
 
-    # --- PLOTTING ---
-    fig, axes = plt.subplots(ncols=3, figsize=(15, 5))
-    fig.suptitle(f"Task 1.3 - Distributed Logistic Regression (Parabola)")
+            cost_history = []
+            consensus_history = []
+            grad_norm_history = [] # Added to track gradient norm
 
-    axes[0].plot(cost_history)
-    axes[0].set_title("Total Cost")
-    axes[0].set_xlabel("Iterations")
-    axes[0].grid(True)
+            print("Starting Distributed Gradient Tracking...")
+            for k in range(max_iter):
+                
+                z_new = W @ z - stepsize * s
+                
+                grad_new = np.zeros((N, d))
+                total_cost = 0
+                
+                for i in range(N):
+                    grad_new[i] = logistic_grad(z_new[i], agents[i]['Phi'], agents[i]['y'])
+                    # Track sum of local costs
+                    total_cost += logistic_loss(z_new[i], agents[i]['Phi'], agents[i]['y'])
+                    
+                s_new = W @ s + grad_new - grad_old
+                
+                z = z_new
+                s = s_new
+                grad_old = grad_new
+                
+                # --- TRACK METRICS ---
+                cost_history.append(total_cost)
+                # Norm of the stacked gradients matrix
+                grad_norm_history.append(np.linalg.norm(grad_new)) 
+                # Deviation from the mean of all agents
+                consensus_error = np.linalg.norm(z - np.mean(z, axis=0))
+                consensus_history.append(consensus_error)
 
-    axes[1].semilogy(grad_norm_history)
-    axes[1].set_title("Gradient Norm")
-    axes[1].set_xlabel("Iterations")
-    axes[1].grid(True)
+            # --- EVALUATION ---
+            final_wb = np.mean(z, axis=0)
+            Phi_all = phi_parabola(X) # Map the whole dataset to evaluate
+            miss_rate = misclassification_rate(final_wb, Phi_all, y)
 
-    axes[2].semilogy(consensus_history)
-    axes[2].set_title("Consensus Error")
-    axes[2].set_xlabel("Iterations")
-    axes[2].grid(True)
+            print("--- Distributed Results ---")
+            print(f"Final Total Loss:      {cost_history[-1]:.4f}")
+            print(f"Final Gradient Norm:   {grad_norm_history[-1]:.2e}")
+            print(f"Consensus Error:       {consensus_history[-1]:.2e}")
+            print(f"Misclassification Rate:{miss_rate:.2f}%")
 
-    plt.tight_layout()
-    plt.show()
+            # --- PLOTTING ---
+            fig, axes = plt.subplots(ncols=3, figsize=(15, 5))
+            fig.suptitle("Task 1.3 - Distributed Logistic Regression (Parabola)")
+
+            axes[0].plot(cost_history)
+            axes[0].set_title("Total Cost")
+            axes[0].set_xlabel("Iterations")
+            axes[0].grid(True)
+
+            axes[1].semilogy(grad_norm_history)
+            axes[1].set_title("Gradient Norm")
+            axes[1].set_xlabel("Iterations")
+            axes[1].grid(True)
+
+            axes[2].semilogy(consensus_history)
+            axes[2].set_title("Consensus Error")
+            axes[2].set_xlabel("Iterations")
+            axes[2].grid(True)
+
+            plt.tight_layout()
+            plt.show()

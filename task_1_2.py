@@ -134,7 +134,8 @@ if __name__ == "__main__":
         # true parameters (arbitrary ground truth)
         rng = np.random.default_rng(99)
         q = phi_fn(np.zeros((1, 2))).shape[1]
-        w_true = rng.standard_normal(q);  w_true /= np.linalg.norm(w_true)
+        w_true = rng.standard_normal(q)
+        w_true /= np.linalg.norm(w_true)
         b_true = rng.uniform(-0.5, 0.5)
 
         X, labels = generate_dataset(M, w_true, b_true, phi_fn, noise=0.02, seed=42)
