@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from task1_1 import weightedAdj as W
-from task1_2 import phi_parabola, logistic_grad, generate_dataset, logistic_loss, misclassification_rate
+from task_1_2 import phi_parabola, logistic_grad, generate_dataset, logistic_loss, misclassification_rate
 
+# berny berny berny
 G=6
 P=40 + (G % 3) * 10
 def split_dataset_even_groups(X, y, N_agents,P, G, seed=42):
