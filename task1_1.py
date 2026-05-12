@@ -7,7 +7,7 @@
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-import Parameters as par
+import parameters as par
 np.random.seed(0)
 
 
