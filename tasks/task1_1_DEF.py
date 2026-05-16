@@ -7,7 +7,7 @@
 
 import networkx as nx
 import numpy as np
-import parameters as par
+import Parameters as par
 
 def _build_graph(graph_type: str, N: int) -> nx.Graph:
     """Return a NetworkX graph given a type string."""

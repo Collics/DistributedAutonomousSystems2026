@@ -8,7 +8,7 @@ Feature mappings:
 """
 
 import numpy as np
-import parameters as par
+import Parameters as par
 
 
 # ─────────────────────────────────────────────

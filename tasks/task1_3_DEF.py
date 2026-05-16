@@ -1,7 +1,7 @@
 import numpy as np
 import networkx as nx
 
-import parameters as par
+import Parameters as par
 from tasks.task1_1_DEF import build_metropolis_weights
 from tasks.task1_2_DEF import phi_parabola, logistic_grad, logistic_loss, generate_dataset, misclassification_rate
 
