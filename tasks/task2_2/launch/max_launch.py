@@ -2,8 +2,14 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 import numpy as np
 import networkx as nx
+import os
+from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
+    rviz_config = os.path.join(
+    get_package_share_directory('task2_2'),
+    'config.rviz'
+    )
     # --- PARAMETRI GLOBALI DEL TASK 2.1 ---
     NN = 10         # Numero di agenti
     maxK = 2000     
@@ -74,13 +80,28 @@ def generate_launch_description():
                 prefix=f'xterm -title "agent_{ii}" -fg white -bg black -fs 12 -fa "Monospace" -hold -e',
             )
         )
+        node_list.append(
+            Node(
+                package=package_name,
+                executable="visualizer",
+                namespace=f"viz_{ii}",
+                parameters=[{
+                    "agent_id": ii,
+                    "communication_time": 0.05,
+                    "b": B_offsets[ii].tolist(),
+                    "r": R_targets[ii].tolist(),
+                }],
+                output="screen",
+            )
+        )
     
     node_list.append(
         Node(
-            package="rviz2",
-            executable="rviz2",
-            name="rviz2"
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            arguments=['-d', rviz_config],
         )
     )
-    
+
     return LaunchDescription(node_list)

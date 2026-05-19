@@ -92,6 +92,8 @@ class Agent(Node):
         """ When all the msg have arrived, do the update """
         msg = MsgFloat()
 
+        msg = MsgFloat()
+
         if self.k == 0:  
             if self.publisher.get_subscription_count() < len(self.neighbors):
                 return
@@ -111,7 +113,11 @@ class Agent(Node):
                 all_received = all(
                     self.k - 1 == int(self.received_data[j][0][0]) for j in self.neighbors
                 )
-
+            self.get_logger().info(
+                f"Agent {int(self.agent_id)}: k={self.k}, "
+                f"buffers={[len(self.received_data[j]) for j in self.neighbors]}, "
+                f"all_received={all_received}"
+            )
             if all_received:
 
                 s_new = self.self_weight * self.s
@@ -149,42 +155,6 @@ class Agent(Node):
                 msg.data = [float(val) for val in raw_data] #ROS2 messages need to be lists of floats, so we convert all values to float before publishing
                 self.publisher.publish(msg)
 
-                # RVIZ VISUALIZATION
-                marker = Marker()
-                
-                marker.header.frame_id = "map"
-                
-                #Every agent has a unique id and namespace, so that they can be visualized as separate markers in RViz
-                marker.ns = "agents"
-                marker.id = int(self.agent_id)
-                
-                marker.type = Marker.SPHERE
-                marker.action = Marker.ADD
-                
-                # Position
-                marker.pose.position.x = float(self.z[0])
-                marker.pose.position.y = float(self.z[1])
-                marker.pose.position.z = 0.0
-                
-                # Standard orientation
-                marker.pose.orientation.x = 0.0
-                marker.pose.orientation.y = 0.0
-                marker.pose.orientation.z = 0.0
-                marker.pose.orientation.w = 1.0
-                
-                marker.scale.x = 0.4
-                marker.scale.y = 0.4
-                marker.scale.z = 0.4
-                
-                # Colour
-                marker.color.r = 1.0
-                marker.color.g = 0.0
-                marker.color.b = 1.0
-                marker.color.a = 1.0 
-                
-                # Publish marker
-                self.rviz_publisher.publish(marker)
-
                 self.k += 1
 
                 #Stop agent at maxK
@@ -193,8 +163,6 @@ class Agent(Node):
                         self.get_logger().info("Max iters reached. Freezing position!")
                         self.k += 1 # Lo incrementiamo solo per non ripetere il print
                     
-                    # Pubblica il marker fisso e ignora tutto il resto
-                    self.rviz_publisher.publish(marker)
                     return
 
 def main(args=None):
