@@ -77,7 +77,6 @@ def generate_launch_description():
                     }
                 ],
                 output="screen",
-                prefix=f'xterm -title "agent_{ii}" -fg white -bg black -fs 12 -fa "Monospace" -hold -e',
             )
         )
         node_list.append(
@@ -87,7 +86,6 @@ def generate_launch_description():
                 namespace=f"viz_{ii}",
                 parameters=[{
                     "agent_id": ii,
-                    "communication_time": 0.05,
                     "b": B_offsets[ii].tolist(),
                     "r": R_targets[ii].tolist(),
                 }],

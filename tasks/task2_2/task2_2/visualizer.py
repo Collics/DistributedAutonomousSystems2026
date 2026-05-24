@@ -2,7 +2,6 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray as MsgFloat
 from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Pose
 import numpy as np
 
 
@@ -16,15 +15,20 @@ class Visualizer(Node):
 
         # Parametri dal launcher
         self.agent_id = self.get_parameter('agent_id').value
-        self.communication_time = self.get_parameter('communication_time').value
         self.b = np.array(self.get_parameter('b').value)
         self.r = np.array(self.get_parameter('r').value)
 
-        # Stato interno
-        self.current_pose = Pose()
-        self.sigma = np.zeros(2)  # stima del baricentro (s del tracking)
+        # Stato interno: posizione corrente dell'agente e stima del baricentro
+        self.x = 0.0
+        self.y = 0.0
+        self.sigma = np.zeros(2)
 
-        # Subscription al topic dell'agente corrispondente
+        # Publisher verso RViz (depth 10 per non perdere messaggi)
+        self.publisher = self.create_publisher(Marker, '/visualization_topic', 10)
+
+        # Subscription al topic dell'agente corrispondente.
+        # I marker vengono pubblicati direttamente nel callback (event-driven)
+        # per eliminare il jitter causato da un timer indipendente.
         self.create_subscription(
             MsgFloat,
             f'/topic_{self.agent_id}',
@@ -32,17 +36,13 @@ class Visualizer(Node):
             10,
         )
 
-        # Publisher verso RViz
-        self.publisher = self.create_publisher(Marker, '/visualization_topic', 1)
-
-        # Timer
-        self.create_timer(self.communication_time, self.publish_data)
-
     def listener_callback(self, msg):
         # msg.data = [agent_id, k, z0, z1, s0, s1, v0, v1]
-        self.current_pose.position.x = msg.data[2]
-        self.current_pose.position.y = msg.data[3]
+        self.x = float(msg.data[2])
+        self.y = float(msg.data[3])
         self.sigma = np.array([msg.data[4], msg.data[5]])
+        # Pubblica immediatamente: movimento fluido, nessun jitter da timer
+        self.publish_data()
 
     def _make_marker(self, marker_id, ns, x, y, shape, color, scale=0.4):
         m = Marker()
@@ -70,8 +70,8 @@ class Visualizer(Node):
         self.publisher.publish(self._make_marker(
             marker_id=self.agent_id,
             ns='agents',
-            x=self.current_pose.position.x,
-            y=self.current_pose.position.y,
+            x=self.x,
+            y=self.y,
             shape=Marker.SPHERE,
             color=[1.0, 0.0, 1.0, 1.0],
             scale=0.4,

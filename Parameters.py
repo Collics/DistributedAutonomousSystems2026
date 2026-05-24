@@ -3,8 +3,8 @@
 ###############
 TASK_1_1 = True
 
-TASK_1_1_Path = True
-TASK_1_1_Star = False
+TASK_1_1_Path = False
+TASK_1_1_Star = True
 TASK_1_1_Cycle = False
 
 TASK_1_1_N = 5

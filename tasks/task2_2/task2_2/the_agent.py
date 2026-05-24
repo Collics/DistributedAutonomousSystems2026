@@ -92,8 +92,6 @@ class Agent(Node):
         """ When all the msg have arrived, do the update """
         msg = MsgFloat()
 
-        msg = MsgFloat()
-
         if self.k == 0:  
             if self.publisher.get_subscription_count() < len(self.neighbors):
                 return
@@ -113,11 +111,6 @@ class Agent(Node):
                 all_received = all(
                     self.k - 1 == int(self.received_data[j][0][0]) for j in self.neighbors
                 )
-            self.get_logger().info(
-                f"Agent {int(self.agent_id)}: k={self.k}, "
-                f"buffers={[len(self.received_data[j]) for j in self.neighbors]}, "
-                f"all_received={all_received}"
-            )
             if all_received:
 
                 s_new = self.self_weight * self.s
@@ -168,7 +161,7 @@ class Agent(Node):
 def main(args=None):
     rclpy.init(args=args)
     anAgent = Agent()
-    sleep(1)
+    sleep(1)  # Attende che la DDS stabilisca tutte le connessioni prima della prima pubblicazione
     
     try:
         rclpy.spin(anAgent)
