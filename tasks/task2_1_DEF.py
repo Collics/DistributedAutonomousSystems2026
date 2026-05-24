@@ -1,10 +1,3 @@
-#
-# Distributed Autonomous Systems - Final Project
-# Task 2.1 – Aggregative Tracking (Multi-Robot Formation)
-# Simone Bernardi, Giorgio Soricetti
-# Bologna, 02/06/2026
-#
-
 import numpy as np
 import Parameters as par
 from graph_utils import get_graph_and_matrix
