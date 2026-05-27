@@ -7,7 +7,7 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     rviz_config = os.path.join(
-    get_package_share_directory('task2_2'),
+    get_package_share_directory('task2'),
     'config.rviz'
     )
     # --- PARAMETRI GLOBALI DEL TASK 2.1 ---
@@ -46,7 +46,7 @@ def generate_launch_description():
     weightedAdj += np.eye(NN) - np.diag(weightedAdj.sum(axis=0))
 
     node_list = []
-    package_name = "task2_2"
+    package_name = "task2"
 
     for ii in range(NN):
         # Estrae i vicini dall'adiacenza

@@ -7,21 +7,21 @@ from graph_utils import get_graph_and_matrix
 # 1.  LOCAL COST AND GRADIENTS
 # =============================================================================
 
-def local_cost(zi, sigma, r_i, b_i, gamma_i, beta_i):
-    """ℓᵢ(zᵢ, σ) = γᵢ‖zᵢ − rᵢ‖² + βᵢ‖zᵢ − σ − bᵢ‖²"""
+def local_cost(zi, sigma, r_i, gamma_i, beta_i):
+    """ℓᵢ(zᵢ, σ) = γᵢ‖zᵢ − rᵢ‖² + βᵢ‖zᵢ − σ‖²"""
     return (gamma_i * np.dot(zi - r_i, zi - r_i)
-            + beta_i * np.dot(zi - sigma - b_i, zi - sigma - b_i))
+            + beta_i * np.dot(zi - sigma, zi - sigma))
 
 
-def grad1_li(zi, sigma, r_i, b_i, gamma_i, beta_i):
-    """∇₁ℓᵢ  w.r.t. zᵢ  =  2γᵢ(zᵢ − rᵢ) + 2βᵢ(zᵢ − σ − bᵢ)"""
+def grad1_li(zi, sigma, r_i, gamma_i, beta_i):
+    """∇₁ℓᵢ  w.r.t. zᵢ  =  2γᵢ(zᵢ − rᵢ) + 2βᵢ(zᵢ − σ)"""
     return (2.0 * gamma_i * (zi - r_i)
-            + 2.0 * beta_i * (zi - sigma - b_i))
+            + 2.0 * beta_i * (zi - sigma))
 
 
-def grad2_li(zi, sigma, b_i, beta_i):
-    """∇₂ℓᵢ  w.r.t. σ  =  −2βᵢ(zᵢ − σ − bᵢ)"""
-    return -2.0 * beta_i * (zi - sigma - b_i)
+def grad2_li(zi, sigma, beta_i):
+    """∇₂ℓᵢ  w.r.t. σ  =  −2βᵢ(zᵢ − σ)"""
+    return -2.0 * beta_i * (zi - sigma)
 
 
 def phi(z_i):
@@ -38,7 +38,7 @@ def grad_phi(z_i):
 # 2.  METRICS COMPUTATION (post-run)
 # =============================================================================
 
-def _compute_metrics(z, r, b, gamma, beta, N, maxK):
+def _compute_metrics(z, r, gamma, beta, N, maxK):
     """
     Compute per-iteration metrics from the full trajectory history z.
 
@@ -62,17 +62,17 @@ def _compute_metrics(z, r, b, gamma, beta, N, maxK):
         cost_k     = 0.0
         grad_sq    = 0.0
         sum_grad2  = np.sum(
-            [-2.0 * beta[j] * (z[k, j] - sigma_k - b[j]) for j in range(N)],
+            [-2.0 * beta[j] * (z[k, j] - sigma_k) for j in range(N)],
             axis=0,
         )
 
         for i in range(N):
-            cost_k += local_cost(z[k, i], sigma_k, r[i], b[i], gamma[i], beta[i])
+            cost_k += local_cost(z[k, i], sigma_k, r[i], gamma[i], beta[i])
 
             # ∇_{z_i} J = ∇₁ℓᵢ + (1/N) Σⱼ ∇₂ℓⱼ
             grad_i = (
                 2.0 * gamma[i] * (z[k, i] - r[i])
-                + 2.0 * beta[i] * (z[k, i] - sigma_k - b[i])
+                + 2.0 * beta[i] * (z[k, i] - sigma_k)
                 + (1.0 / N) * sum_grad2
             )
             grad_sq += np.dot(grad_i, grad_i)
@@ -89,7 +89,7 @@ def _compute_metrics(z, r, b, gamma, beta, N, maxK):
 # 3.  AGGREGATIVE TRACKING ALGORITHM
 # =============================================================================
 
-def _run_scenario(graph_type, N, stepsize, maxK, gamma, beta, b, r, z_init, label):
+def _run_scenario(graph_type, N, stepsize, maxK, gamma, beta, r, z_init, label):
     """
     Run one aggregative-tracking scenario and return a result dict compatible
     with the plotting functions in plots_task2_DEF.py.
@@ -123,14 +123,14 @@ def _run_scenario(graph_type, N, stepsize, maxK, gamma, beta, b, r, z_init, labe
     z[0] = z_init.copy()
     for i in range(N):
         s[0, i] = phi(z[0, i])
-        v[0, i] = grad2_li(z[0, i], s[0, i], b[i], beta[i])
+        v[0, i] = grad2_li(z[0, i], s[0, i], beta[i])
 
     # ── Main loop ────────────────────────────────────────────────────────
     for k in range(maxK - 1):
 
         # z-update
         for i in range(N):
-            g1    = grad1_li(z[k, i], s[k, i], r[i], b[i], gamma[i], beta[i])
+            g1    = grad1_li(z[k, i], s[k, i], r[i], gamma[i], beta[i])
             g_phi = grad_phi(z[k, i])
             z[k+1, i] = z[k, i] - stepsize * (g1 + g_phi * v[k, i])
 
@@ -148,13 +148,13 @@ def _run_scenario(graph_type, N, stepsize, maxK, gamma, beta, b, r, z_init, labe
             v[k+1, i]  = A[i, i] * v[k, i]
             for j in neighbours:
                 v[k+1, i] += A[i, j] * v[k, j]
-            grad2_new   = grad2_li(z[k+1, i], s[k+1, i], b[i], beta[i])
-            grad2_old   = grad2_li(z[k,   i], s[k,   i], b[i], beta[i])
+            grad2_new   = grad2_li(z[k+1, i], s[k+1, i], beta[i])
+            grad2_old   = grad2_li(z[k,   i], s[k,   i], beta[i])
             v[k+1, i]  += grad2_new - grad2_old
 
     # ── Metrics ──────────────────────────────────────────────────────────
     cost, grad_norm, consensus, sigma_err = _compute_metrics(
-        z, r, b, gamma, beta, N, maxK
+        z, r, gamma, beta, N, maxK
     )
 
     z_opt     = z[-1]                       # (N, 2)
@@ -206,12 +206,6 @@ def run_task2_1():
     beta  = np.ones(N) * 0.1   # formation weight βᵢ
 
     # Formation offsets b_i arranged as a regular polygon  (Σ bᵢ = 0)
-    radius = 6.0
-    b = np.array([
-        [radius * np.cos(2.0 * np.pi * i / N),
-         radius * np.sin(2.0 * np.pi * i / N)]
-        for i in range(N)
-    ])
 
     # Private targets – reproducible random positions
     rng = np.random.default_rng(0)
@@ -229,7 +223,7 @@ def run_task2_1():
     sc_baseline = _run_scenario(
         graph_type=graph,
         N=N, stepsize=stepsize, maxK=maxK,
-        gamma=gamma, beta=beta, b=b, r=r, z_init=z_init,
+        gamma=gamma, beta=beta, r=r, z_init=z_init,
         label=f"{graph.capitalize()} graph",
     )
     scenarios.append(sc_baseline)
@@ -245,7 +239,7 @@ def run_task2_1():
             sc = _run_scenario(
                 graph_type=g_type,
                 N=N, stepsize=stepsize, maxK=maxK,
-                gamma=gamma, beta=beta, b=b, r=r, z_init=z_init,
+                gamma=gamma, beta=beta, r=r, z_init=z_init,
                 label=f"{g_type.capitalize()} graph",
             )
             scenarios.append(sc)

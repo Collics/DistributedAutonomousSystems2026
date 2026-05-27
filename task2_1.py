@@ -37,12 +37,12 @@ def phi_i(zi):
 
 
 def grad_phi_i(zi):
-    """∇φᵢ(zᵢ) = I₂  (2×2 identity Jacobian)."""
+    """∇φᵢ(zᵢ) = I₂  (2x2 identity Jacobian)."""
     return np.eye(len(zi))
 
 
 def local_cost(zi, sigma, r_i, gamma_i, r0):
-    """ℓᵢ(zᵢ, σ) = γᵢ‖zᵢ−rᵢ‖² + ‖σ−r₀‖²"""
+    """ℓᵢ(zᵢ, σ) = γᵢ‖zᵢ-rᵢ‖² + ‖σ−r₀‖²"""
     return gamma_i * np.dot(zi - r_i, zi - r_i) + np.dot(sigma - r0, sigma - r0)
 
 

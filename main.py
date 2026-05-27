@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import Parameters as par
- 
+
 from plots import (
     plot_task1_1,
     plot_task1_1_comparison,

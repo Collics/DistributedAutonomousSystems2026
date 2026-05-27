@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 from glob import glob
 
-package_name = 'task2_2'
+package_name = 'task2'
 
 setup(
     name=package_name,
@@ -12,7 +12,8 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ("share/" + package_name, glob("launch/max_launch.py")),
-        ('share/' + package_name, glob('config.rviz'))
+        ('share/' + package_name, glob("launch/task2_3_launch.py")),
+        ('share/' + package_name, glob('config.rviz')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,8 +28,10 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            "generic_agent = task2_2.the_agent:main",
-            "visualizer = task2_2.visualizer:main",
+            "generic_agent = task2.the_agent:main",
+            "visualizer = task2.visualizer:main",
+            'task2_3_agent = task2.task2_3_agent:main',
+            'central_visualizer = task2.centralized_visualizer:main',
         ],
     },
 )

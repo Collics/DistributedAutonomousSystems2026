@@ -623,3 +623,4 @@ def animate_task2_1(scenario, skip_frames=5, save_mp4=False):
             print(f"Error saving animation (ffmpeg might be missing): {e}")
 
     plt.show()
+    

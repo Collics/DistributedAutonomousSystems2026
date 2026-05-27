@@ -336,3 +336,83 @@ def plot_task2_1_comparison(scenarios, title=None):
                fontsize=9, framealpha=0.9, bbox_to_anchor=(0.5, -0.06))
     plt.tight_layout(rect=[0, 0.06, 1, 1])
     return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────
+#  Plot 5 – Animated 2-D visualisation for Task 2.3 (Nominal vs Safe)
+# ─────────────────────────────────────────────────────────────────────────
+
+def plot_task2_3_animation(nominal, safe, step=5, interval=60, title=None):
+    """
+    Animated side-by-side visualisation of robots navigating obstacles.
+    """
+    z_nom  = nominal["z"]          
+    z_safe = safe["z"]             
+    N      = z_nom.shape[1]
+    
+    frames = list(range(0, z_nom.shape[0], step))
+    colors = _robot_colors(N)
+
+    # Compute axis limits dynamically from initial and target positions
+    all_pos = np.vstack([nominal["z"][0], nominal["targets"], nominal["obstacles"]])
+    margin  = 2.0
+    xlim    = (all_pos[:, 0].min() - margin, all_pos[:, 0].max() + margin)
+    ylim    = (all_pos[:, 1].min() - margin, all_pos[:, 1].max() + margin)
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig.suptitle(title or f"Task 2.3 – CBF-QP Safety Animation", fontsize=12, fontweight="bold")
+
+    # Static elements setup for both subplots
+    for ax, data, title_ax in zip(axes, [nominal, safe], ["Nominal Tracking", "CBF Safe Tracking"]):
+        ax.set_xlim(*xlim)
+        ax.set_ylim(*ylim)
+        ax.set_aspect("equal")
+        ax.grid(True, linestyle=":", alpha=0.5)
+        ax.set_title(title_ax)
+
+        # Draw Obstacles
+        for o_idx, center in enumerate(data['obstacles']):
+            circle = plt.Circle(center, data['d_safe'], facecolor='tab:orange', edgecolor='tab:red', alpha=0.25, linewidth=2)
+            ax.add_patch(circle)
+            ax.text(center[0] + 0.2, center[1] + 0.2, f'O{o_idx + 1}', color='tab:red', fontsize=10)
+
+        # Draw Targets
+        for i in range(N):
+            ax.scatter(*data['targets'][i], marker="x", s=100, color=colors[i], zorder=2)
+
+    # Dynamic elements – one scatter & trail per robot per subplot
+    dots_nom = [axes[0].plot([], [], "o", color=colors[i], ms=9, markeredgecolor="k", markeredgewidth=0.5, zorder=5)[0] for i in range(N)]
+    trails_nom = [axes[0].plot([], [], "-", color=colors[i], lw=1.0, alpha=0.5, zorder=3)[0] for i in range(N)]
+
+    dots_safe = [axes[1].plot([], [], "o", color=colors[i], ms=9, markeredgecolor="k", markeredgewidth=0.5, zorder=5)[0] for i in range(N)]
+    trails_safe = [axes[1].plot([], [], "-", color=colors[i], lw=1.0, alpha=0.5, zorder=3)[0] for i in range(N)]
+
+    iter_text = axes[0].text(0.02, 0.97, "", transform=axes[0].transAxes, fontsize=9, va="top")
+
+    def _init():
+        for d in dots_nom + trails_nom + dots_safe + trails_safe:
+            d.set_data([], [])
+        iter_text.set_text("")
+        return dots_nom + trails_nom + dots_safe + trails_safe + [iter_text]
+
+    def _update(f_idx):
+        k = frames[f_idx]
+        
+        for i in range(N):
+            # Update Nominal
+            dots_nom[i].set_data([z_nom[k, i, 0]], [z_nom[k, i, 1]])
+            trail_nom_x = [z_nom[frames[t], i, 0] for t in range(max(0, f_idx-20), f_idx+1)]
+            trail_nom_y = [z_nom[frames[t], i, 1] for t in range(max(0, f_idx-20), f_idx+1)]
+            trails_nom[i].set_data(trail_nom_x, trail_nom_y)
+
+            # Update Safe
+            dots_safe[i].set_data([z_safe[k, i, 0]], [z_safe[k, i, 1]])
+            trail_safe_x = [z_safe[frames[t], i, 0] for t in range(max(0, f_idx-20), f_idx+1)]
+            trail_safe_y = [z_safe[frames[t], i, 1] for t in range(max(0, f_idx-20), f_idx+1)]
+            trails_safe[i].set_data(trail_safe_x, trail_safe_y)
+
+        iter_text.set_text(f"k = {k}")
+        return dots_nom + trails_nom + dots_safe + trails_safe + [iter_text]
+
+    anim = animation.FuncAnimation(fig, _update, init_func=_init, frames=len(frames), interval=interval, blit=False, repeat=True)
+    return anim, fig
