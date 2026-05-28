@@ -2,174 +2,143 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import networkx as nx
+import Parameters as par
  
 #  Task 1.1
- 
-def plot_task1_1(cost, gradient, consensus,
-                 title="Task 1.1 – Distributed Gradient Tracking"):
-    """
-    Three-panel convergence plot for a single topology run.
- 
-    Parameters
-    ----------
-    cost      : array-like, shape (K,) – global cost per iteration
-    gradient  : array-like, shape (K,) – global gradient norm per iteration
-    consensus : array-like, shape (K,) – consensus error per iteration
-    title     : str – figure suptitle (includes topology name when called
-                from main)
-    """
+def plot_task_1_1_summary_results(all_costs, all_grads, all_consensus):
     fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10, 10), sharex=True)
-    fig.suptitle(title, fontsize=13, fontweight="bold")
- 
-    # Plot 1: Global Cost Function
-    axes[0].plot(cost[:-1], linewidth=2)
-    axes[0].set_title(r"Evolution of the Global Cost Function $\ell(\bar{z})$")
+    cmap = plt.get_cmap('Dark2')
+    
+    for idx, (gt, cost_hist) in enumerate(all_costs.items()):
+        axes[0].plot(cost_hist, label=f"Topology: {gt}", linewidth=2.5, color=cmap(idx))
+    axes[0].set_title(r"Evolution of the Global Cost Function $l(\bar{z})$", fontweight='bold')
     axes[0].set_ylabel("Cost Function")
-    axes[0].grid(True, alpha=0.4)
- 
-    # Plot 2: Gradient Norm (log scale – linear on log = exponential convergence)
-    axes[1].semilogy(np.abs(gradient[:-1]), linewidth=2)
-    axes[1].set_title(
-        r"Evolution of the Global Gradient Norm $\|\nabla\ell(\bar{z})\|$ (Log Scale)"
-    )
-    axes[1].set_ylabel("Norm of Gradient (Log Scale)")
-    axes[1].grid(True, which="both", alpha=0.4)
- 
-    # Plot 3: Consensus Error
-    axes[2].semilogy(consensus[:-1], linewidth=2)
-    axes[2].set_title(r"Evolution of the Consensus Error $\|z - \bar{z}\|$")
-    axes[2].set_ylabel("Consensus Error (Log Scale)")
-    axes[2].set_xlabel("Iteration $k$")
-    axes[2].grid(True, which="both", alpha=0.4)
- 
+    axes[0].legend()
+
+    for idx, (gt, grad_hist) in enumerate(all_grads.items()):
+        axes[1].semilogy(grad_hist, label=f"Topology: {gt}", linewidth=2.5, color=cmap(idx))
+    axes[1].set_title(r"Evolution of the Global Gradient Norm $\|\nabla l(\bar{z})\|$ (Log Scale)", fontweight='bold')
+    axes[1].set_ylabel("Norm of Gradient (Log)")
+    axes[1].legend()
+
+    for idx, (gt, consensus_hist) in enumerate(all_consensus.items()):
+        axes[2].plot(consensus_hist, label=f"Topology: {gt}", linewidth=2.5, color=cmap(idx))
+    axes[2].set_title(r"Evolution of the Consensus Error $\|z - \bar{z}\|$", fontweight='bold')
+    axes[2].set_ylabel("Consensus Error")
+    axes[2].set_xlabel("Iterations k") 
+    axes[2].legend()
+
     plt.tight_layout(h_pad=2.0)
-    return fig
- 
- 
-def plot_task1_1_comparison(results):
-    """
-    Overlays cost, gradient norm and consensus error for multiple topologies
-    in a single figure, following the style of plot_combined_results() in
-    plot_utils.py.
- 
-    Parameters
-    ----------
-    results : dict  {graph_type: {"cost": …, "gradient": …, "consensus": …}}
-              as returned by task1_1() when called for multiple topologies.
-    """
-    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10, 10), sharex=True)
-    fig.suptitle(
-        "Task 1.1 – Topology Comparison", fontsize=13, fontweight="bold"
-    )
- 
-    for g_type, m in results.items():
-        lbl = f"Topology: {g_type.capitalize()}"
-        axes[0].plot(m["cost"][:-1],              label=lbl, linewidth=2)
-        axes[1].semilogy(np.abs(m["gradient"][:-1]), label=lbl, linewidth=2)
-        axes[2].semilogy(m["consensus"][:-1],     label=lbl, linewidth=2)
- 
-    specs = [
-        (axes[0], r"Evolution of the Global Cost Function $\ell(\bar{z})$",
-         "Cost Function", False),
-        (axes[1],
-         r"Evolution of the Global Gradient Norm $\|\nabla\ell(\bar{z})\|$ (Log Scale)",
-         "Norm of Gradient (Log Scale)", True),
-        (axes[2], r"Evolution of the Consensus Error $\|z - \bar{z}\|$ (Log Scale)",
-         "Consensus Error (Log Scale)", True),
-    ]
-    for ax, title, ylabel, _ in specs:
-        ax.set_title(title)
-        ax.set_ylabel(ylabel)
-        ax.grid(True, which="both", alpha=0.4)
-        ax.legend()
- 
-    axes[-1].set_xlabel("Iteration $k$")
-    plt.tight_layout(h_pad=2.0)
-    return fig
- 
- 
-def plot_task1_1_network(G, graph_type):
-    """
-    Draws the network topology using a spring layout.
- 
-    Parameters
-    ----------
-    G          : networkx.Graph
-    graph_type : str – topology name used as title
-    """
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.set_title(f"Topology: {graph_type.capitalize()}",
-                 fontsize=14, fontweight="bold")
-    pos = nx.spring_layout(G, seed=42)
-    nx.draw(G, pos, ax=ax, with_labels=True,
-            node_color="lightblue", edge_color="gray",
-            node_size=600, font_weight="bold")
+    plt.show()
+
+def plot_task_1_1_network(all_graphs):
+    num_graphs = len(all_graphs)
+    fig, axes = plt.subplots(nrows=1, ncols=num_graphs, figsize=(6 * num_graphs, 5))
+    if num_graphs == 1: axes = [axes]
+        
+    for ax, (gt, G) in zip(axes, all_graphs.items()):
+        ax.set_title(f"Graph: {gt.upper()}", fontsize=13, fontweight='bold', color='#333333')
+        pos = nx.spring_layout(G, seed=42) 
+        # Cambiati forma (esagono), colori e spessori per renderlo unico
+        nx.draw(G, pos, ax=ax, with_labels=True, 
+                node_color='#F08080', edge_color='#888888', 
+                node_size=800, node_shape='h', font_weight='bold', 
+                font_color='white', width=1.5)
+        ax.set_facecolor('#ffffff')
     plt.tight_layout()
-    return fig
- 
+    plt.show()
+
+def plot_task_1_1_consensus_dynamics(z_history, topology_name, z_star=None):
+    max_iters, n_agents, d = z_history.shape
+    fig, axes = plt.subplots(nrows=d, ncols=1, figsize=(10, 4 * d), sharex=True)
+    if d == 1: axes = [axes]
+    cmap = plt.get_cmap('Set2')
+        
+    for comp in range(d):
+        ax = axes[comp]
+        if z_star is not None:
+            # Linea dell'ottimo modificata
+            ax.axhline(y=z_star[comp], color="#000000", linestyle='-.', linewidth=2.5, alpha=0.85, 
+                       label=r'Optimal $z^*$ (Centralized)', zorder=2)
+            
+        for i in range(n_agents):
+            ax.plot(z_history[:, i, comp], label=f"Agent {i+1}", linewidth=1.8, color=cmap(i), zorder=3)
+            
+        ax.set_title(f"Component $z[{comp}]$ Consensus - {topology_name.capitalize()}", fontweight='bold')
+        ax.set_ylabel(f"Value $z[{comp}]$")
+        
+        if comp == 0:
+            ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+
+    axes[-1].set_xlabel("Iteration k")
+    plt.tight_layout()
+    plt.show()
+
+
+
  
 
 #  Task 1.2
 
-def plot_task1_2(cost_hist, grad_norm_hist, map_name=""):
-    """
-    Two-panel training-curve plot for centralised logistic regression.
- 
-    Parameters
-    ----------
-    cost_hist      : list of floats – loss per iteration
-    grad_norm_hist : list of floats – gradient norm per iteration
-    map_name       : str – feature mapping name, e.g. 'Parabola'
-    """
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 8), sharex=True)
-    fig.suptitle(
-        f"Task 1.2 – Centralised Logistic Regression ({map_name})",
-        fontsize=13, fontweight="bold",
-    )
- 
-    # Plot 1: Cost Function Evolution
-    axes[0].plot(cost_hist, linewidth=2)
-    axes[0].set_title(r"Evolution of the Loss $\mathcal{L}(w, b)$")
-    axes[0].set_ylabel("Loss")
-    axes[0].grid(True, alpha=0.4)
- 
-    # Plot 2: Gradient Norm (log scale)
-    axes[1].semilogy(grad_norm_hist, linewidth=2)
-    axes[1].set_title(
-        r"Evolution of the Gradient Norm $\|\nabla\mathcal{L}\|$ (Log Scale)"
-    )
-    axes[1].set_ylabel(r"$\|\nabla\mathcal{L}\|$ (Log Scale)")
-    axes[1].set_xlabel("Iteration $k$")
-    axes[1].grid(True, which="both", alpha=0.4)
- 
-    plt.tight_layout(h_pad=2.0)
-    return fig
- 
- 
-def plot_task1_2_dataset(X, labels, phi_fn=None, wb=None,
-                         map_name="", data_range=(-3, 3)):
-    """
-    Scatter plot of the 2-D dataset with optional decision boundary.
- 
-    Parameters
-    ----------
-    X         : (M, 2) dataset
-    labels    : (M,)   in {-1, +1}
-    phi_fn    : callable  x → ϕ(x)  (required to draw the boundary)
-    wb        : (q+1,) weight vector [w; b] (required to draw the boundary)
-    map_name  : str – used in the title
-    data_range: (min, max) for the contour grid
-    """
+def plot_task_1_2_datasets(X, labels_cubic, labels_super, phi_c=None, phi_s=None, w_c=None, b_c=None, w_s=None, b_s=None, title_prefix=""):
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(14, 6), sharex=True, sharey=True)
+    configs = [
+        {"name": "Parabola", "labels": labels_cubic, "phi": phi_c, "w": w_c, "b": b_c},
+        {"name": "Hyperbola", "labels": labels_super, "phi": phi_s, "w": w_s, "b": b_s}
+    ]
+    
+    x_range = np.linspace(par.TASK_1_2_RANGE[0], par.TASK_1_2_RANGE[1], 100)
+    y_range = np.linspace(par.TASK_1_2_RANGE[0], par.TASK_1_2_RANGE[1], 100)
+    X_mesh, Y_mesh = np.meshgrid(x_range, y_range)
+
+    for ax, conf in zip(axes, configs):
+        ax.scatter(X[conf["labels"] == 1, 0], X[conf["labels"] == 1, 1], 
+                   color='#8A2BE2', marker='^', label='+1 (Healthy)', alpha=0.6, s=25, edgecolors='none')
+        ax.scatter(X[conf["labels"] == -1, 0], X[conf["labels"] == -1, 1], 
+                   color='#FF8C00', marker='v', label='-1 (Defective)', alpha=0.6, s=25, edgecolors='none')
+        
+        if conf["w"] is not None and conf["b"] is not None and conf["phi"] is not None:
+            Z = np.zeros(X_mesh.shape)
+            for i in range(X_mesh.shape[0]):
+                for j in range(X_mesh.shape[1]):
+                    point = np.array([X_mesh[i,j], Y_mesh[i,j]])
+                    Z[i,j] = np.dot(conf["w"], conf["phi"](point)) + conf["b"]
+            
+            ax.contour(X_mesh, Y_mesh, Z, levels=[0], colors='#2F4F4F', linestyles='-.', linewidths=2.5)
+            ax.plot([], [], color='#2F4F4F', linestyle='-.', linewidth=2.5, label='Decision Boundary')
+
+        ax.set_title(f"{title_prefix}{conf['name']} Feature Mapping", fontweight='bold')
+        ax.set_xlabel(r"$x_1$")
+        ax.set_ylabel(r"$x_2$")
+        ax.set_aspect('equal')
+        ax.legend(loc='upper right', framealpha=0.9)
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_task_1_2_metrics(cost_hist, grad_hist, title):
+    fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+    
+    axes[0].plot(cost_hist, color='#20B2AA', linewidth=2.5) 
+    axes[0].set_title(f"Centralized Loss Evolution - {title}", fontweight='bold')
+    axes[0].set_ylabel("Loss Function")
+    
+    axes[1].semilogy(grad_hist, color='#C71585', linewidth=2.5) 
+    axes[1].set_title(f"Gradient Norm (Log) - {title}", fontweight='bold')
+    axes[1].set_ylabel("Norm")
+    axes[1].set_xlabel("Iteration k")
+    
+    plt.tight_layout()
+    plt.show()
+
+def plot_task1_2_dataset(X, labels, phi_fn=None, wb=None, map_name="", data_range=(-3, 3)):
     fig, ax = plt.subplots(figsize=(7, 6))
-    fig.suptitle(
-        f"Task 1.2 – Dataset & Decision Boundary ({map_name})",
-        fontsize=13, fontweight="bold",
-    )
+    fig.suptitle(f"Task 1.2 – Data & Boundary ({map_name})", fontsize=13, fontweight="bold")
  
     ax.scatter(X[labels ==  1, 0], X[labels ==  1, 1],
-               color="blue", label="Class +1", alpha=0.5, s=15)
+               color="#8A2BE2", marker='^', label="Class +1", alpha=0.6, s=25, edgecolors='none')
     ax.scatter(X[labels == -1, 0], X[labels == -1, 1],
-               color="red",  label="Class −1", alpha=0.5, s=15)
+               color="#FF8C00", marker='v', label="Class −1", alpha=0.6, s=25, edgecolors='none')
  
     if phi_fn is not None and wb is not None:
         grid = np.linspace(data_range[0], data_range[1], 200)
@@ -177,169 +146,83 @@ def plot_task1_2_dataset(X, labels, phi_fn=None, wb=None,
         pts = np.column_stack([Xm.ravel(), Ym.ravel()])
         Phi_grid = phi_fn(pts)
         Z = (Phi_grid @ wb[:-1] + wb[-1]).reshape(Xm.shape)
-        ax.contour(Xm, Ym, Z, levels=[0], colors="black", linewidths=2)
-        ax.plot([], [], color="black", linewidth=2, label="Decision Boundary")
+        ax.contour(Xm, Ym, Z, levels=[0], colors="#2F4F4F", linestyles='-.', linewidths=2.5)
+        ax.plot([], [], color="#2F4F4F", linestyle='-.', linewidth=2.5, label="Boundary")
  
     ax.set_xlabel(r"$x_1$")
     ax.set_ylabel(r"$x_2$")
     ax.set_aspect("equal")
-    ax.grid(True, alpha=0.3)
-    ax.legend(loc="upper right")
+    ax.legend(loc="upper right", framealpha=0.9)
     plt.tight_layout()
     return fig
 
-# ──────────────────────────────────────────────────────────────
 #  Task 1.3
-# ──────────────────────────────────────────────────────────────
  
-def plot_task1_3(cost_history, grad_norm_history, consensus_history, title=""):
-    """
-    Three-panel convergence plot for one distributed run (single topology
-    and dataset size).
- 
-    Parameters
-    ----------
-    cost_history      : list of floats
-    grad_norm_history : list of floats
-    consensus_history : list of floats
-    title             : str – figure suptitle (includes topology / M)
-    """
-    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10, 10), sharex=True)
-    fig.suptitle(
-        title or "Task 1.3 – Distributed Logistic Regression",
-        fontsize=13, fontweight="bold",
-    )
- 
-    # Plot 1: Total Cost
-    axes[0].plot(cost_history, linewidth=2)
-    axes[0].set_title(r"Evolution of the Global Cost Function $\mathcal{L}$")
-    axes[0].set_ylabel("Total Loss")
-    axes[0].grid(True, alpha=0.4)
- 
-    # Plot 2: Gradient Norm (log scale)
-    axes[1].semilogy(grad_norm_history, linewidth=2)
-    axes[1].set_title(
-        r"Evolution of the Gradient Norm $\|\nabla\mathcal{L}\|$ (Log Scale)"
-    )
-    axes[1].set_ylabel("Norm (Log Scale)")
-    axes[1].grid(True, which="both", alpha=0.4)
- 
-    # Plot 3: Consensus Error (log scale)
-    axes[2].semilogy(consensus_history, linewidth=2)
-    axes[2].set_title(
-        r"Evolution of the Consensus Error $\|z - \bar{z}\|$ (Log Scale)"
-    )
-    axes[2].set_ylabel("Consensus Error (Log Scale)")
-    axes[2].set_xlabel("Iteration $k$")
-    axes[2].grid(True, which="both", alpha=0.4)
- 
-    plt.tight_layout(h_pad=2.0)
-    return fig
- 
- 
-def plot_task1_3_comparison(results, centr_cost=None, centr_grad=None):
-    """
-    Overlays cost, gradient norm and consensus error across all topology ×
-    dataset-size combinations from task1_3(), with an optional centralized
-    baseline, following the style of plot_task1_3_metrics() in plot_utils.py.
- 
-    Parameters
-    ----------
-    results    : list of dicts returned by task1_3()  (keys: graph_name, M,
-                 cost_history, grad_norm_history, consensus_history, title)
-    centr_cost : list of floats (optional) – centralized baseline cost
-    centr_grad : list of floats (optional) – centralized baseline grad norm
-    """
-    cmap = plt.get_cmap("tab10")
- 
-    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10, 12), sharex=True)
-    fig.suptitle(
-        "Task 1.3 – Distributed vs Centralized Comparison",
-        fontsize=13, fontweight="bold",
-    )
- 
-    # Optional centralized baseline
-    if centr_cost is not None:
-        axes[0].plot(centr_cost, color="black", linestyle="--", linewidth=1.5,
-                     alpha=0.8, label="Centralized (Ideal)", zorder=2)
-    if centr_grad is not None:
-        axes[1].semilogy(centr_grad, color="black", linestyle="--",
-                         linewidth=1.5, alpha=0.8,
-                         label="Centralized (Ideal)", zorder=2)
- 
-    for idx, res in enumerate(results):
-        lbl   = f"{res['graph_name'].capitalize()} | M={res['M']}"
-        color = cmap(idx / max(len(results) - 1, 1))
- 
-        axes[0].plot(res["cost_history"],      label=lbl, color=color,
-                     linewidth=1.8, zorder=3)
-        axes[1].semilogy(res["grad_norm_history"], label=lbl, color=color,
-                         linewidth=1.8, zorder=3)
-        axes[2].semilogy(res["consensus_history"], label=lbl, color=color,
-                         linewidth=1.8, zorder=3)
- 
-    specs = [
-        (axes[0], r"Global Cost Function $\mathcal{L}$",              "Total Loss"),
-        (axes[1], r"Gradient Norm $\|\nabla\mathcal{L}\|$ (Log Scale)", "Norm (Log Scale)"),
-        (axes[2], r"Consensus Error $\|z - \bar{z}\|$ (Log Scale)",    "Consensus Error (Log Scale)"),
-    ]
-    for ax, title, ylabel in specs:
-        ax.set_title(title)
-        ax.set_ylabel(ylabel)
-        ax.grid(True, which="both", alpha=0.4)
-        ax.legend(bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=8)
- 
-    axes[-1].set_xlabel("Iteration $k$")
-    plt.tight_layout(h_pad=2.0)
-    return fig
- 
- 
-def plot_task1_3_data_split(agents_data):
-    """
-    Visualises how the dataset is distributed among agents, with each agent
-    assigned a distinct colour to highlight the spatial bias.
-    Mirrors plot_data_split() from plot_utils.py.
- 
-    Parameters
-    ----------
-    agents_data : dict  {agent_index: {"X": …, "y": …}}
-                  as produced by split_dataset_even_groups()
-    """
-    cmap = plt.get_cmap("tab10")
+def plot_task_1_3_individual_distr_metrics(centr_cost, centr_grad, dist_cost, dist_grad, g_type, mapping_name):
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 10), sharex=True)
+    
+    axes[0].plot(centr_cost, color='#708090', linestyle=':', linewidth=2, label="Centr. (Ideal)", alpha=0.8)
+    axes[0].plot(dist_cost, color='#4169E1', linewidth=2, label=f"Distr. ({g_type.upper()})")
+    axes[0].set_title(f"Cost Comparison: {mapping_name} [{g_type.upper()}]", fontweight='bold')
+    axes[0].set_ylabel("Loss")
+    axes[0].legend()
+    
+    axes[1].semilogy(centr_grad, color='#708090', linestyle=':', linewidth=2, label="Centr. (Ideal)", alpha=0.8)
+    axes[1].semilogy(dist_grad, color='#4169E1', linewidth=2, label=f"Distr. ({g_type.upper()})")
+    axes[1].set_title("Gradient Norm (Log)", fontweight='bold')
+    axes[1].set_ylabel("Norm")
+    axes[1].set_xlabel("Iteration k")
+    axes[1].legend()
+    
+    plt.tight_layout()
+    plt.show()
+
+def plot_task_1_3_metrics(centr_cost, cent_grad, dist_costs, dist_grads, title_prefix):
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 10), sharex=True)
+    cmap = plt.get_cmap('Dark2')
+
+    axes[0].plot(centr_cost, color='#708090', linestyle=':', linewidth=2, alpha=0.8, label="Centr. Baseline", zorder=2)
+    for i, (g_type, cost_hist) in enumerate(dist_costs.items()):
+        axes[0].plot(cost_hist, label=f"Distr. {g_type.upper()}", color=cmap(i), linewidth=1.8, zorder=3)
+    axes[0].set_title(f"Global Cost - {title_prefix}", fontweight='bold')
+    axes[0].set_ylabel("Loss")
+    axes[0].legend()
+    
+    axes[1].semilogy(cent_grad, color='#708090', linestyle=':', linewidth=2, alpha=0.8, label="Centr. Baseline", zorder=2)
+    for i, (g_type, grad_hist) in enumerate(dist_grads.items()):
+        axes[1].semilogy(grad_hist, label=f"Distr. {g_type.upper()}", color=cmap(i), linewidth=1.8, zorder=3)
+    axes[1].set_title(f"Global Gradient Norm - {title_prefix}", fontweight='bold')
+    axes[1].set_ylabel("Norm (Log)")
+    axes[1].set_xlabel("Iteration k")
+    axes[1].legend()
+    
+    plt.tight_layout()
+    plt.show()
+
+def plot_task1_3_data_split(agents_data, title_prefix="Task 1.3"):
+    cmap = plt.get_cmap("Set2")
     fig, ax = plt.subplots(figsize=(9, 7))
-    fig.suptitle(
-        "Task 1.3 – Dataset Distribution Among Agents",
-        fontsize=13, fontweight="bold",
-    )
+    
+    fig.suptitle(f"{title_prefix} – Agent Dataset Allocation", fontsize=14, fontweight="bold")
  
-    for i, data in agents_data.items():
-        ax.scatter(data["X"][:, 0], data["X"][:, 1],
-                   color=cmap(i), label=f"Agent {i + 1}",
-                   alpha=0.7, edgecolors="k", s=25)
+    for i, data in enumerate(agents_data):
+        ax.scatter(data[:, 0], data[:, 1], color=cmap(i), marker='p', label=f"Node {i + 1}", alpha=0.75, edgecolors="white", s=45)
  
     ax.set_xlabel(r"$x_1$")
     ax.set_ylabel(r"$x_2$")
-    ax.grid(True, alpha=0.3)
     ax.set_aspect("equal")
  
-    # Legend outside the plot to avoid cluttering
     fig.subplots_adjust(right=0.78)
-    ax.legend(bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=9)
+    ax.legend(bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=10, framealpha=0.9)
  
     plt.tight_layout()
+    plt.show() 
     return fig
 
 
 # ──────────────────────────────────────────────────────────────
 #  Task 2.1
 # ──────────────────────────────────────────────────────────────
-
-#
-# Distributed Autonomous Systems - Final Project
-# Plotting utilities for Task 2.1 – Aggregative Tracking
-# Simone Bernardi, Giorgio Soricetti
-# Bologna, 02/06/2026
-#
 
 import numpy as np
 import matplotlib.pyplot as plt

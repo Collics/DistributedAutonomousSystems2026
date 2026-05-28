@@ -1,14 +1,20 @@
+#
+# Distributed Autonomous Systems
+# Task 1.3 - Distributed Classification
+# Ivan Colangelo, Nicholas Gioia, Alexandru Zaporojanu
+# Bologna, 09/06/26
+#
+
 import numpy as np
 import networkx as nx
-
 import Parameters as par
-from tasks.task1_1_DEF import build_metropolis_weights
-from tasks.task1_2_DEF import phi_parabola, logistic_grad, logistic_loss, generate_dataset, misclassification_rate
-
+from graph_utils import get_graph_and_matrix
+from tasks.task1_2_DEF import centralized_gradient_descent, phi_parabola, phi_hyperbola, generate_dataset
+from plots import plot_task_1_1_consensus_dynamics, plot_task1_3_data_split, plot_task_1_3_individual_distr_metrics, plot_task_1_3_metrics
 # ──────────────────────────────────────────────────────────────
 #  Dataset splitting
 # ──────────────────────────────────────────────────────────────
-def split_dataset_even_groups(X, y, N_agents, P, seed=42):
+def split_dataset_even_groups(X, labels):
     """
     Divide the dataset for even-group agents.
  
@@ -16,148 +22,209 @@ def split_dataset_even_groups(X, y, N_agents, P, seed=42):
     - (100-P)% → sorted by feature x2 and split into contiguous blocks.
     """
 
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(seed=0)
+    M = len(X)
+    G = par.TASK_1_3_GROUP_NUMBER
+    N = par.TASK_1_3_N
+
+    P_percent = 40 + (G % 3) * 10
+    M_baseline = int(M * (P_percent / 100)) # number of samples for baseline random split
+
+    # Baseline Random Split
+    indices = np.arange(M) # array of indices from 0 to M-1
+    rng.shuffle(indices) # shuffle the indices randomly
+
+    idx_baseline  = indices[:M_baseline] # first P% for baseline random split
+    idx_remaining = indices[M_baseline:] # remaining (100-P)% for feature-biased split
+
+    # Split the baseline indices into N equal parts for the random split
+    baseline_splits = np.array_split(idx_baseline, N)
+
+    x2_remaining = X[idx_remaining, 1] # extract the x2 feature for the remaining data
+    sorted_order = np.argsort(x2_remaining) # get the order of indices to sort by x2
+
+    sorted_idx = idx_remaining[sorted_order] # sort the remaining indices by x2
+
+    # Split the sorted indices into N contiguous blocks for the feature-biased split
+    sorted_splits = np.array_split(sorted_idx, N)
+
+    # Combine the baseline and sorted splits for each agent
+    agent_datasets = []
+    for i in range(N):
+        idx_agent = np.concatenate((baseline_splits[i], sorted_splits[i])) # combine baseline and sorted indices for agent i
+        agent_datasets.append({
+            "X": X[idx_agent],
+            "labels": labels[idx_agent]
+        })
+    return agent_datasets
+
+
+# Helper function
+
+def single_agent_logistic_grad(z_i, agent_data_i, phi_fn):
+    """
+    Computes the local gradient of the logistic loss for a single agent.
+    z_i          : (q+1,)
+    agent_data_i : dict with 'X' and 'labels'
+    phi_func     : callable R^d -> R^q
+    """
+
+    X_i      = agent_data_i['X']
+    labels_i = agent_data_i['labels']
+ 
+    # Augment: [phi(X_i), 1]  →  (M_i, q+1)
+    Phi_i        = phi_fn(X_i)                                   # (M_i, q)
+    phi_tilde_i  = np.hstack([Phi_i, np.ones((len(X_i), 1))])     # (M_i, q+1)
+ 
+    # Gradient of  sum_m log(1 + exp(-p_m * phi_tilde_m @ z_i))
+    exp_term = 1.0 + np.exp(labels_i * (phi_tilde_i @ z_i))       # (M_i,)
+    grad_i   = np.sum((-labels_i[:, None] * phi_tilde_i)
+                      / exp_term[:, None], axis=0)                 # (q+1,)
+    return grad_i
+
+def global_logistic_metrics(z_matrix, X_global, labels_global, phi_fn):
+    """
+    Evaluates global cost and gradient norm at the consensus mean z_bar.
+    z_matrix : (N, q+1)
+    """
+    z_bar = np.mean(z_matrix, axis=0)                              # (q+1,)
+ 
+    Phi_all      = phi_fn(X_global)                              # (M, q)
+    phi_tilde    = np.hstack([Phi_all,
+                               np.ones((len(X_global), 1))])       # (M, q+1)
+ 
+    # Cost: numerically stable with logaddexp
+    argument   = -labels_global * (phi_tilde @ z_bar)
+    total_cost = np.sum(np.logaddexp(0, argument))
+ 
+    # Gradient norm
+    exp_term    = 1.0 + np.exp(labels_global * (phi_tilde @ z_bar))
+    global_grad = np.sum((-labels_global[:, None] * phi_tilde)
+                         / exp_term[:, None], axis=0)
+    grad_norm   = np.linalg.norm(global_grad)
+ 
+    return total_cost, grad_norm, z_bar
+
+
+#  Single experiment run
+def run_ev(X, labels, phi_fn, mapping):
+    N = par.TASK_1_3_N
+    stepsize = par.TASK_1_3_STEPSIZE
+    max_iter = par.TASK_1_3_MAX_ITER
     M = len(X)
 
-    # 1. Calcolo percentuale P
-    num_baseline = int(M * (P / 100))
-    
-    # 2. Creiamo un array di indici da 0 a M-1 e lo mescoliamo
-    indices       = np.arange(M)
-    rng.shuffle(indices)
+    # ──- Centralised baseline (for reference) ─────────────────────────────
+    print(f"\n{'-'*55}")
+    print(f" MAPPING: {mapping.upper()} | Dataset Size: {M}")
+    print(f"{'-'*55}")
+    print("  [Baseline] Running Centralised Gradient Descent...")
+    theta_centr, cost_centr, grad_centr = centralized_gradient_descent(X, phi_fn, labels, stepsize, max_iter)
 
-    idx_baseline  = indices[:num_baseline]
-    idx_remaining = indices[num_baseline:]
+    # --- Data Splitting for Distributed Algorithm ────────────────────────────────────────────
+    agents = split_dataset_even_groups(X, labels)
 
-    # Dividiamo gli indici della baseline equamente tra gli N agenti
-    baseline_splits = np.array_split(idx_baseline, N_agents)
+    distributed_cost_hist = {}
+    distributed_grad_hist = {}
 
-    # 3. Vertical Feature-Biased Split sul (100-P)% rimanente
-    # Estraiamo i valori della feature x2 (seconda colonna, indice 1) per i dati rimanenti
-    x2_remaining = X[idx_remaining, 1]
+    # ──- Gradient Tracking Loop ─────────────────────────────────────────────
+    for gt in par.GRAPH_TYPES:
+        G, A = get_graph_and_matrix(N, gt)
 
-    # np.argsort restituisce l'ordine degli indici per avere l'array crescente
-    sorted_order = np.argsort(x2_remaining)
-    idx_remaining_sorted = idx_remaining[sorted_order]
+        print(f"\n  ➤ TOPOLOGY: {gt.upper()} | N = {N} Agents")
+        print("    Running Distributed Gradient Tracking...")
 
-    # Dividiamo gli indici ordinati in N blocchi contigui
-    sorted_splits = np.array_split(idx_remaining_sorted, N_agents)
+        # ── Initialisation ────────────────────────────────────────────────────
+        q_dim = phi_fn(X[0:1]).shape[1] # dimension of the feature mapping output (q)
+        d_opt = q_dim + 1 # dimension of the optimization variable [w; b]
+        z = np.zeros((max_iter,N, d_opt))
+        s = np.zeros((max_iter,N, d_opt))
 
-    # 4. Uniamo le due parti per ciascun agente
-    agent_data = {}
-    for i in range(N_agents):
-        idx = np.concatenate((baseline_splits[i], sorted_splits[i]))
-        agent_data[i] = {"X": X[idx], "y": y[idx]}
- 
-    return agent_data
+        cost_hist = np.zeros(max_iter)
+        grad_hist = np.zeros(max_iter)
 
-_GRAPH_BUILDERS = {
-    1: ("path",  lambda N: nx.path_graph(N)),
-    2: ("star",  lambda N: nx.star_graph(N - 1)),
-    3: ("cycle", lambda N: nx.cycle_graph(N)),
-}
+        z[0] = np.random.randn(N, d_opt) # random init
+        for ii in range(N):
+            s[0, ii] = single_agent_logistic_grad(z[0, ii], agents[ii], phi_fn)
+        
+        cost_hist[0], grad_hist[0], z_bar = global_logistic_metrics(z[0], X, labels, phi_fn)
 
-def run_single(M_size: int, graph_id: int, N: int, P: float,
-                stepsize: float, max_iter: int):
-    graph_name, graph_fn = _GRAPH_BUILDERS[graph_id]
-    G  = graph_fn(N)
-    W  = build_metropolis_weights(G)
- 
-    print(f"\n  [Task 1.3] graph={graph_name} | M={M_size} | N={N} | "
-          f"P={P:.0f}% | α={stepsize}")
- 
-    # Dataset
-    rng    = np.random.default_rng(99)
-    w_true = rng.standard_normal(3)   # 3 features for Parabola
-    b_true = rng.uniform(-0.5, 0.5)
-    X, y   = generate_dataset(M_size, w_true, b_true, phi_parabola)
- 
-    agents = split_dataset_even_groups(X, y, N, P)
-    for i in range(N):
-        agents[i]["Phi"] = phi_parabola(agents[i]["X"])
- 
-    # Initialisation
-    d        = 4               # q=3 features + 1 bias
-    z        = np.zeros((N, d))
-    s        = np.zeros((N, d))
-    grad_old = np.zeros((N, d))
- 
-    for i in range(N):
-        grad_old[i] = logistic_grad(z[i], agents[i]["Phi"], agents[i]["y"])
-        s[i]        = grad_old[i].copy()
- 
-    cost_hist      = []
-    grad_norm_hist = []
-    consensus_hist = []
- 
-    # Gradient tracking loop
-    for k in range(max_iter):
-        z_new    = W @ z - stepsize * s
-        grad_new = np.zeros((N, d))
-        total_cost = 0.0
- 
-        for i in range(N):
-            grad_new[i]  = logistic_grad(z_new[i], agents[i]["Phi"], agents[i]["y"])
-            total_cost  += logistic_loss(z_new[i], agents[i]["Phi"], agents[i]["y"])
- 
-        s_new    = W @ s + grad_new - grad_old
-        z        = z_new
-        s        = s_new
-        grad_old = grad_new
- 
-        cost_hist.append(total_cost)
-        grad_norm_hist.append(np.linalg.norm(grad_new))
-        consensus_hist.append(np.linalg.norm(z - np.mean(z, axis=0)))
- 
-    # Evaluation
-    final_wb = np.mean(z, axis=0)
-    Phi_all  = phi_parabola(X)
-    miss     = misclassification_rate(final_wb, Phi_all, y)
- 
-    print(f"    Final total loss:     {cost_hist[-1]:.4f}")
-    print(f"    Final gradient norm:  {grad_norm_hist[-1]:.2e}")
-    print(f"    Consensus error:      {consensus_hist[-1]:.2e}")
-    print(f"    Misclassification:    {miss:.2f}%")
- 
-    return {
-        "graph_name":      graph_name,
-        "M":               M_size,
-        "cost_history":    cost_hist,
-        "grad_norm_history": grad_norm_hist,
-        "consensus_history": consensus_hist,
-        "miss_rate":       miss,
-        "title": f"Task 1.3 – {graph_name.capitalize()} graph | M={M_size}",
-    }
+        for k in range(max_iter - 1):
+            for ii in range(N):
+                # Update z[k+1, ii] based on the graph structure
+                N_ii = list(G.neighbors(ii))
+
+                z[k+1, ii] = A[ii, ii] * z[k, ii]
+                for jj in N_ii:
+                    z[k+1, ii] += A[ii, jj] * z[k, jj]
+                z[k+1, ii] -= stepsize * s[k, ii]
+
+                # Compute the new gradient at z[k+1, ii] and the old gradient at z[k, ii]
+                grad_new = single_agent_logistic_grad(z[k+1, ii], agents[ii], phi_fn)
+                grad_curr = single_agent_logistic_grad(z[k, ii], agents[ii], phi_fn)
+
+                # Update s[k+1, ii] using the gradient tracking formula  
+                s[k+1, ii] = A[ii, ii] * s[k, ii]
+                for jj in N_ii:
+                    s[k+1, ii] += A[ii, jj] * s[k, jj]
+                s[k+1, ii] += grad_new - grad_curr
+
+            cost_hist[k+1], grad_hist[k+1], z_bar = global_logistic_metrics(z[k+1], X, labels, phi_fn) # for plotting
+
+        distributed_cost_hist[gt] = cost_hist
+        distributed_grad_hist[gt] = grad_hist
+
+        plot_task_1_1_consensus_dynamics(z, gt, z_star = theta_centr)
+        plot_task_1_3_individual_distr_metrics(cost_centr, grad_centr, cost_hist, grad_hist, gt, mapping_name = mapping)
+
+        print("\n --- Performance Evaluation --- ")
+        # --- Centralised baseline results
+        w_centr, b_centr = theta_centr[:-1], theta_centr[-1]
+        pred_labels_centr = generate_dataset(X, w_centr, b_centr, phi_fn)
+        acc_rate_centr = np.mean(pred_labels_centr == labels) * 100
+        missclass_centr = M - int((acc_rate_centr / 100) * M)
+
+        # --- Distributed results
+        w_distr, b_distr = z_bar[:-1], z_bar[-1]
+        pred_labels_distr = generate_dataset(X, w_distr, b_distr, phi_fn)
+        acc_rate_distr = np.mean(pred_labels_distr == labels) * 100
+        missclass_distr = M - int((acc_rate_distr / 100) * M)
+
+        print("    [Performance Evaluation]")
+        print(f"    ├─ Centralised : Accuracy {acc_rate_centr:6.2f}% | Missclassified: {missclass_centr}")
+        print(f"    └─ Distributed : Accuracy {acc_rate_distr:6.2f}% | Missclassified: {missclass_distr}")
+
+
+        plot_task_1_3_metrics(cost_centr, grad_centr, distributed_cost_hist, distributed_grad_hist, mapping)
+
+        
 
 # ──────────────────────────────────────────────────────────────
 #  Main task function
 # ──────────────────────────────────────────────────────────────
  
 def task1_3():
-    """
-    Run Task 1.3 for all combinations of dataset size × graph topology
-    defined in Parameters.py.
+    np.random.seed(0)
+    M_list = par.TASK_1_3_M_LIST
+
+    range = par.TASK_1_3_RANGE
+
+    for M in M_list:
+        print("\n" + "="*65)
+        print(f" [TASK 1.3] EVALUATING DATASET: M = {M} SAMPLES | Range: {range}")
+        print("="*65)
+        # Generate random points
+        lower, upper = range
+        X = np.random.uniform(lower, upper, (M, 2)) # M random points in 2D
+
+        labels = np.zeros(M)
+        agents_dataset = split_dataset_even_groups(X, labels) # labels for splitting (not used in this form)
+        agents_X = [agent_data['X'] for agent_data in agents_dataset]
+
+        plot_task1_3_data_split(agents_X, f"Data Split for M={M}")
+
+        labels_parabola = generate_dataset(X, w=par.W_PARABOLA, b=par.B_PARABOLA, phi_fn=phi_parabola)
+        labels_hyperbola = generate_dataset(X, w=par.W_HYPERBOLA, b=par.B_HYPERBOLA, phi_fn=phi_hyperbola)
+
+        run_ev(X, labels_parabola, phi_parabola, "Parabola")
+        run_ev(X, labels_hyperbola, phi_hyperbola, "Hyperbola")
  
-    Returns
-    -------
-    results : list of dicts (one per combination), each with keys:
-        'graph_name', 'M', 'cost_history', 'grad_norm_history',
-        'consensus_history', 'miss_rate', 'title'
-    """
-    group_id = par.TASK_1_3_GROUP_NUMBER
-    N        = par.TASK_1_3_N
-    P        = 40 + (group_id % 3) * 10 
-    stepsize = par.TASK_1_3_STEPSIZE
-    max_iter = par.TASK_1_3_MAX_ITER
-    M_list   = par.TASK_1_3_M_LIST
-    graphs   = par.TASK_1_3_GRAPHS
- 
-    print(f"\n[Task 1.3] Group {group_id}: P={P}% | N={N} agents")
- 
-    results = []
-    for graph_id in graphs:
-        for M_size in M_list:
-            res = run_single(M_size, graph_id, N, P, stepsize, max_iter)
-            results.append(res)
- 
-    return results

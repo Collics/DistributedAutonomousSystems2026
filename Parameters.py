@@ -1,24 +1,52 @@
+
+import numpy as np
+
 ###############
 # TASK 1.1 
 ###############
-TASK_1_1 = True
+TASK_1_1 = False
 
-TASK_1_1_Path = False
-TASK_1_1_Star = True
-TASK_1_1_Cycle = False
+GRAPH_TYPES = ['star', 'cycle', 'path', 'complete', 'random'] # all graph types to test
 
+d = 2
 TASK_1_1_N = 5
-TASK_1_1_STEPSIZE = 2 * 1e-1
+TASK_1_1_STEPSIZE = 1e-2
 TASK_1_1_MAX_ITER = 1000
+
+
+# Local quadratic cost function: l_i(z) = 0.5 * z^T * Q_i * z + r_i^T * z
+Q = np.zeros((TASK_1_1_N, d, d))
+r = np.zeros((TASK_1_1_N, d))
+
+for i in range(TASK_1_1_N):
+    temp = np.random.randn(d, d) 
+    Q[i] = 0.5 * (temp + temp.T) + 2 * np.eye(d) 
+    r[i] = 0 * (np.random.rand(d) - 0.5) 
+
+# Flags for plotting
+TASK_1_1_PLOT_CONSENSUS = True
+TASK_1_1_PLOT_NETWORK = True
+TASK_1_1_PLOT_SUMMARY = True
 
 ###############
 # TASK 1.2 
 ###############
-TASK_1_2 = True
+TASK_1_2 = False
 
 TASK_1_2_M = 500   # total dataset size
+TASK_1_2_RANGE = (-2, 2)  # range for generating data
 TASK_1_2_STEPSIZE = 5e-4   # step size
-TASK_1_2_MAX_ITER = 3000
+TASK_1_2_MAX_ITER = 1000
+
+# Parabola Mapping Parameters (phi_parabola = [x1, x2, x1^2].T)
+# Dimension q = 3
+W_PARABOLA = np.random.uniform(low=-2.0, high=2.0, size=3).tolist()
+B_PARABOLA = float(np.random.uniform(low=-2.0, high=2.0))
+
+# Hyperbola Mapping Parameters (phi_hyperbola = [x1, x2, x1·x2].T) ---
+# Dimension q = 3
+W_HYPERBOLA = np.random.uniform(low=-2.0, high=2.0, size=3).tolist()
+B_HYPERBOLA = float(np.random.uniform(low=-2.0, high=2.0))
 
 ###############
 # TASK 1.3
@@ -27,16 +55,16 @@ TASK_1_3 = True
 
 TASK_1_3_GROUP_NUMBER = 6          # group number (determines P)
 TASK_1_3_N        = 5          # number of agents
-TASK_1_3_M_LIST   = [500, 1000, 1500]   # dataset sizes to test
-TASK_1_3_STEPSIZE = 0.05
-TASK_1_3_MAX_ITER = 2000
-# Graph topologies to test: subset of {1: path, 2: star, 3: cycle}
-TASK_1_3_GRAPHS   = [1, 2, 3]
+TASK_1_3_M_LIST   = [500, 1000]   # dataset sizes to test
+TASK_1_3_STEPSIZE = 0.005
+TASK_1_3_MAX_ITER = 1000
+TASK_1_3_RANGE     = (-2, 2)   # range for generating data
+
 
 ###############
 # TASK 2.1
 ###############
-RUN_TASK_2_1 = True
+RUN_TASK_2_1 = False
 TASK_2_1_ANIMATE = True
  
 TASK_2_1_N        = 6          # number of robots
