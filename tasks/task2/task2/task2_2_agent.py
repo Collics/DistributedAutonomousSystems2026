@@ -3,17 +3,15 @@ from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray as MsgFloat
 import numpy as np
 from time import sleep
-from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Point
 
-def local_cost(zi, sigma, r_i, b_i, gamma_i, beta_i):
-    return gamma_i * np.dot(zi - r_i, zi - r_i) + beta_i * np.dot(zi - sigma - b_i, zi - sigma - b_i)
+def local_cost(zi, sigma, r_i, gamma_i, beta_i):
+    return gamma_i * np.dot(zi - r_i, zi - r_i) + beta_i * np.dot(zi - sigma, zi - sigma)
  
-def grad1_li(zi, sigma, r_i, b_i, gamma_i, beta_i):
-    return 2.0 * gamma_i * (zi - r_i) + 2.0 * beta_i * (zi - sigma - b_i)
+def grad1_li(zi, sigma, r_i, gamma_i, beta_i):
+    return 2.0 * gamma_i * (zi - r_i) + 2.0 * beta_i * (zi - sigma)
  
-def grad2_li(zi, sigma, b_i, beta_i):
-    return -2.0 * beta_i * (zi - sigma - b_i)
+def grad2_li(zi, sigma, beta_i):
+    return -2.0 * beta_i * (zi - sigma)
 
 def phi(z_i):
     return z_i
@@ -36,7 +34,6 @@ class Agent(Node):
         self.gamma = self.get_parameter("gamma").value
         self.beta = self.get_parameter("beta").value
         
-        self.b = np.array(self.get_parameter("b").value)
         self.r = np.array(self.get_parameter("r").value) # Private target from launch
         
         self.agent_id = float(self.get_parameter("id").value)
@@ -44,16 +41,17 @@ class Agent(Node):
         
         # self.weights[j] conterrà il peso W_ij
         weight = self.get_parameter("weights").value
-        self.weights = {n: w for n, w in zip(self.neighbors, weight)} #couples neighbors and weights in a dict for easier access
+        self.weights = {n: w for n, w in zip(self.neighbors, weight)}
         self.self_weight = self.get_parameter("self_weight").value # W_ii
 
+        # Original Log
         self.get_logger().info(f"I am agent: {self.agent_id:.0f}")
 
         # Initialization of state variables 
         self.k = 0
         self.z = np.array(self.get_parameter("xzero").value)
         self.s = phi(self.z)
-        self.v = grad2_li(self.z, self.s, self.b, self.beta)
+        self.v = grad2_li(self.z, self.s, self.beta) # Updated
 
         # Setup Comunication
         for j in self.neighbors:
@@ -72,14 +70,10 @@ class Agent(Node):
             10,
         )
 
-        self.rviz_publisher = self.create_publisher(
-            Marker,
-            "/agent_markers",
-            10
-        )
-
-        # Timer 
-        self.timer = self.create_timer(0.01, self.timer_callback)
+        # Timer (slowed down slightly to 0.05 to allow visualizer to keep up)
+        self.timer = self.create_timer(0.05, self.timer_callback)
+        
+        # Original Log
         self.get_logger().info(f"Agent {self.agent_id:.0f}: setup completed!")
 
     def listener_callback(self, msg):
@@ -98,27 +92,22 @@ class Agent(Node):
                 
             # First Iteration with initial state
             raw_data = [self.agent_id, self.k, *self.z, *self.s, *self.v]
-            msg.data = [float(val) for val in raw_data] #ROS2 messages need to be lists of floats, so we convert all values to float before publishing
+            msg.data = [float(val) for val in raw_data] 
             self.publisher.publish(msg)
             self.k += 1
 
         else:
             all_received = False
-            # Verifies that there is at least one message from all the neighbors
             if all(len(self.received_data[j]) > 0 for j in self.neighbors):
-                # Verifies that the message at the head of the queue is exactly the one from step k-1
-                # (msg.data[1] that we have saved in msg_j[0] is the iteration k)
                 all_received = all(
                     self.k - 1 == int(self.received_data[j][0][0]) for j in self.neighbors
                 )
+                
             if all_received:
-
                 s_new = self.self_weight * self.s
                 v_new = self.self_weight * self.v
-
                 
                 for j in self.neighbors:
-                    
                     msg_j = self.received_data[j].pop(0) 
                     
                     s_j = np.array([msg_j[3], msg_j[4]]) 
@@ -127,15 +116,15 @@ class Agent(Node):
                     s_new += self.weights[j] * s_j
                     v_new += self.weights[j] * v_j
 
-                g1 = grad1_li(self.z, self.s, self.r, self.b, self.gamma, self.beta)
+                g1 = grad1_li(self.z, self.s, self.r, self.gamma, self.beta)
                 g_phi = grad_phi(self.z)
 
                 z_new = self.z - self.stepsize * (g1 + g_phi * v_new)
 
                 s_new += phi(z_new) - phi(self.z)
 
-                grad2_new = grad2_li(z_new, s_new, self.b, self.beta)
-                grad2_old = grad2_li(self.z, self.s, self.b, self.beta)
+                grad2_new = grad2_li(z_new, s_new, self.beta)
+                grad2_old = grad2_li(self.z, self.s, self.beta)
 
                 v_new += grad2_new - grad2_old
 
@@ -145,23 +134,22 @@ class Agent(Node):
                 
                 # New state
                 raw_data = [self.agent_id, self.k, *self.z, *self.s, *self.v]
-                msg.data = [float(val) for val in raw_data] #ROS2 messages need to be lists of floats, so we convert all values to float before publishing
+                msg.data = [float(val) for val in raw_data] 
                 self.publisher.publish(msg)
 
                 self.k += 1
 
-                #Stop agent at maxK
+                # Stop agent at maxK with original log
                 if self.k > self.maxK:
                     if self.k == self.maxK + 1:
                         self.get_logger().info("Max iters reached. Freezing position!")
-                        self.k += 1 # Lo incrementiamo solo per non ripetere il print
-                    
+                        self.k += 1 
                     return
 
 def main(args=None):
     rclpy.init(args=args)
     anAgent = Agent()
-    sleep(1)  # Attende che la DDS stabilisca tutte le connessioni prima della prima pubblicazione
+    sleep(1)  
     
     try:
         rclpy.spin(anAgent)
