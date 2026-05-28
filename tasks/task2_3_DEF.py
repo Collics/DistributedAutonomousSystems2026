@@ -5,62 +5,54 @@ Task 2.3: Multi-Robot Safety Controllers using CBF-QP
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
 from scipy.optimize import minimize, LinearConstraint
 
 import Parameters as par
 from graph_utils import get_graph_and_matrix
 
-# Import the core tracking math and metrics from your existing framework
+# Import core tracking math
 from tasks.task2_1_DEF import grad1_li, grad2_li, phi, grad_phi, _compute_metrics
-from plots_task2 import plot_task2_3_animation
+
+# Import cleanly separated plotting utilities!
+from plots_task2 import (
+    plot_task2_3_trajectories,
+    plot_task2_3_metrics,
+    plot_task2_3_safety,
+    plot_task2_3_animation
+)
 
 def cbf_qp_filter(z_i, u_nom, obstacles, d_safe, gamma_cbf):
     """Solve the 2D CBF-QP using scipy.optimize.minimize."""
     if obstacles.size == 0:
         return u_nom, False
 
-    # Computation of the CBF constraint matrices A and b
-    # Constraint: -∇V_o(z_k)^T u_k <= gamma * V_o(z_k) --> A * u <= b
     diff = z_i[None, :] - obstacles
     grad_V = 2.0 * diff
     A = -grad_V
     b = gamma_cbf * (np.sum(diff**2, axis=1) - d_safe**2)
 
-    # Objective function for SciPy: ||u - u_nom||^2
     def objective(u):
         return np.sum((u - u_nom)**2)
     
-    # Jacobian of the objective function
     def jacobian(u):
         return 2 * (u - u_nom)
 
-    # Constraints A*u <= b
     constraints = LinearConstraint(A, -np.inf, b)
-
     u0 = np.copy(u_nom)
 
-    # Execution of the optimization using SLSQP method
     res = minimize(
-        objective, 
-        u0, 
-        method='SLSQP', 
-        jac=jacobian, 
-        constraints=constraints,
-        options={'ftol': 1e-9, 'disp': False}
+        objective, u0, method='SLSQP', jac=jacobian, 
+        constraints=constraints, options={'ftol': 1e-9, 'disp': False}
     )
 
     if res.success:
         best_u = res.x
-        # Check if the filter has been activated significantly
         cost = float(np.sum((best_u - u_nom) ** 2))
         activated = cost > 1e-6
         return best_u, activated
     else:
-        # If infeasible, apply emergency stop
-        print(f"Warning: QP Infeasible or not converged. Applying emergency stop.")
+        print("Warning: QP Infeasible. Applying emergency stop.")
         return np.zeros(2), True
-
 
 def compute_safety_metrics(z, obstacles, d_safe):
     """Computes minimum clearance and minimum CBF value across all iterations."""
@@ -75,20 +67,8 @@ def compute_safety_metrics(z, obstacles, d_safe):
 
     return min_clearance, min_cbf_value
 
-
-def draw_obstacles(ax, obstacles, d_safe):
-    """Draws obstacles on a Matplotlib axis."""
-    for idx, center in enumerate(obstacles):
-        circle = Circle(center, d_safe, facecolor='tab:orange', edgecolor='tab:red', alpha=0.25, linewidth=2)
-        ax.add_patch(circle)
-        ax.text(center[0] + 0.2, center[1] + 0.2, f'O{idx + 1}', color='tab:red', fontsize=10)
-
-
 def simulate_team(use_safety):
-    """
-    Runs the Aggregative Tracking algorithm using existing logic from task2_1_DEF.py,
-    optionally applying the CBF-QP safety filter.
-    """
+    """Runs the Aggregative Tracking algorithm with optional CBF-QP safety filter."""
     N         = par.TASK_2_3_N
     max_iters = par.TASK_2_3_MAX_ITER
     stepsize  = par.TASK_2_3_ALPHA
@@ -99,12 +79,9 @@ def simulate_team(use_safety):
     graph     = par.TASK_2_3_GRAPH
     obstacles = np.array(par.TASK_2_3_OBSTACLES, dtype=float)
 
-    # ── Re-create environment from task2_1_DEF ──
     gamma = np.ones(N) * gamma_val
     beta  = np.ones(N) * beta_val
     
-    # ── MODIFIED SCENARIO ──
-    # 1. Spread initial positions in a circle on the left side of the map
     init_center = np.array([-7.0, 0.0])
     init_radius = 1.0
     z_init = np.array([
@@ -113,7 +90,6 @@ def simulate_team(use_safety):
         for i in range(N)
     ])
 
-    # 2. Arrange private targets in a regular hexagon/circle on the right side of the map
     target_center = np.array([7.0, 0.0])
     target_radius = 4.0
     r = np.array([
@@ -122,7 +98,6 @@ def simulate_team(use_safety):
         for i in range(N)
     ])
 
-    # ── Initialize Tracking Variables ──
     G, A = get_graph_and_matrix(N, graph)
     Adj  = (A - np.eye(N)) > 0
 
@@ -139,11 +114,9 @@ def simulate_team(use_safety):
 
     safety_activations = 0
 
-    # ── Main Tracking Loop ──
     for k in range(max_iters - 1):
         z_next = np.zeros((N, 2))
         
-        # z-update
         for i in range(N):
             g1 = grad1_li(z[k, i], s[k, i], r[i], gamma[i], beta[i])
             g_phi = grad_phi(z[k, i])
@@ -159,17 +132,14 @@ def simulate_team(use_safety):
             u_app_hist[k, i] = u_app
             z_next[i] = z[k, i] + u_app
 
-        # s-update & v-update (from task2_1_DEF)
         for i in range(N):
             neighbours = np.where(Adj[i])[0]
             
-            # Consensus tracker
             s[k+1, i]  = A[i, i] * s[k, i]
             for j in neighbours:
                 s[k+1, i] += A[i, j] * s[k, j]
             s[k+1, i] += phi(z_next[i]) - phi(z[k, i])
 
-            # Gradient tracker
             v[k+1, i]  = A[i, i] * v[k, i]
             for j in neighbours:
                 v[k+1, i] += A[i, j] * v[k, j]
@@ -179,7 +149,6 @@ def simulate_team(use_safety):
 
         z[k+1] = z_next
 
-    # ── Retrieve Global Metrics via built-in function ──
     cost, grad_norm, consensus, sigma_err = _compute_metrics(z, r, gamma, beta, N, max_iters)
     min_clearance, min_cbf_value = compute_safety_metrics(z, obstacles, d_safe)
 
@@ -199,7 +168,6 @@ def simulate_team(use_safety):
         'gamma_cbf': gamma_cbf,
     }
 
-
 def run_task_2_3():
     print("======================================================================")
     print("--- Starting Task 2.3: Multi-Robot Safety Controllers ---")
@@ -214,77 +182,20 @@ def run_task_2_3():
     print(f"Minimum safe clearance: {np.min(safe['min_clearance']):.4f}")
     print(f"Safety activations: {safe['safety_activations']}")
 
-    if par.TASK_2_3_PLOTS:
-        # ==========================================
-        # FIGURE 1: Trajectories (Nominal vs Safe)
-        # ==========================================
-        fig1, axes1 = plt.subplots(1, 2, figsize=(14, 6))
-        for idx, (data, title) in enumerate([
-            (nominal, f"Nominal Tracking - {par.TASK_2_3_GRAPH}"),
-            (safe, f"CBF Safe Tracking - {par.TASK_2_3_GRAPH}")
-        ]):
-            ax = axes1[idx]
-            draw_obstacles(ax, data['obstacles'], data['d_safe'])
-            for i in range(data['z'].shape[1]):
-                ax.plot(data['z'][:, i, 0], data['z'][:, i, 1], alpha=0.7, label=f'Robot {i + 1}')
-                ax.scatter(data['z'][0, i, 0], data['z'][0, i, 1], marker='o', color='blue', alpha=0.5)
-                ax.scatter(data['targets'][i, 0], data['targets'][i, 1], marker='x', s=100, color='red')
-            ax.set_title(title)
-            ax.set_xlabel('X position')
-            ax.set_ylabel('Y position')
-            ax.grid(True, linestyle=':', alpha=0.6)
-            ax.axis('equal')
-        fig1.tight_layout()
+    if getattr(par, 'TASK_2_3_PLOTS', False):
+        # The plotting logic is now cleanly abstracted!
+        fig1 = plot_task2_3_trajectories(nominal, safe)
+        fig2 = plot_task2_3_metrics(nominal, safe)
+        fig3 = plot_task2_3_safety(nominal, safe)
 
-        # ==========================================
-        # FIGURE 2: Cost and Gradient Norm Evolution
-        # ==========================================
-        fig2, axes2 = plt.subplots(1, 2, figsize=(14, 5))
-        axes2[0].plot(nominal['cost_history'], label='Nominal', linewidth=2, color='tab:blue')
-        axes2[0].plot(safe['cost_history'], label='Safe (CBF)', linewidth=2, linestyle='--', color='tab:red')
-        axes2[0].set_title('Global Cost Evolution')
-        axes2[0].set_xlabel('Iteration k')
-        axes2[0].set_ylabel(r'$J(z,\sigma)$')
-        axes2[0].grid(True, linestyle=':', alpha=0.6)
-        axes2[0].legend()
-
-        axes2[1].semilogy(nominal['grad_norm_history'], label='Nominal', linewidth=2, color='tab:orange')
-        axes2[1].semilogy(safe['grad_norm_history'], label='Safe (CBF)', linewidth=2, linestyle='--', color='tab:red')
-        axes2[1].set_title('Gradient Norm Evolution')
-        axes2[1].set_xlabel('Iteration k')
-        axes2[1].set_ylabel(r'$\| \nabla J(z,\sigma) \|$')
-        axes2[1].grid(True, linestyle=':', alpha=0.6)
-        axes2[1].legend()
-        fig2.tight_layout()
-
-        # ==========================================
-        # FIGURE 3: Safety Metrics
-        # ==========================================
-        fig3, axes3 = plt.subplots(1, 2, figsize=(14, 5))
-        axes3[0].plot(nominal['min_clearance'], label='Nominal', linewidth=2)
-        axes3[0].plot(safe['min_clearance'], label='CBF-QP safe', linewidth=2)
-        axes3[0].axhline(0.0, color='k', linestyle='--', linewidth=1)
-        axes3[0].set_title('Minimum clearance to obstacle boundary')
-        axes3[0].set_xlabel('Iteration k')
-        axes3[0].set_ylabel(r'$\|z_i - p_o\| - d_{safe}$')
-        axes3[0].grid(True, linestyle=':', alpha=0.6)
-        axes3[0].legend()
-
-        control_delta = np.linalg.norm(safe['u_app'] - nominal['u_nom'], axis=2)
-        axes3[1].plot(np.max(control_delta, axis=1), color='tab:purple', linewidth=2)
-        axes3[1].set_title('Maximum safety correction per iteration')
-        axes3[1].set_xlabel('Iteration k')
-        axes3[1].set_ylabel(r'$\max(\|u_i^{safe} - u_i^{nom}\|)$')
-        axes3[1].grid(True, linestyle=':', alpha=0.6)
-        fig3.tight_layout()
-
-        
-        if getattr(par, 'TASK_2_3_ANIMATION', False):
+        if getattr(par, 'TASK_2_3_ANIMATION', False) or getattr(par, 'TASK_2_3_ANIMATE', False):
             print("Rendering animation...")
             global keep_alive_anim 
             keep_alive_anim, fig_anim = plot_task2_3_animation(nominal, safe, step=5, interval=40)
             
         plt.show()
+
+    return nominal, safe # Standard practice to return data for analysis
 
 if __name__ == "__main__":
     run_task_2_3()

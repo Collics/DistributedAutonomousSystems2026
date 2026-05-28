@@ -11,8 +11,9 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ("share/" + package_name, glob("launch/max_launch.py")),
+        ("share/" + package_name, glob("launch/task2_2_launch.py")),
         ('share/' + package_name, glob("launch/task2_3_launch.py")),
+        ('share/' + package_name, glob('launch/rviz_visual_launch.py')),
         ('share/' + package_name, glob('config.rviz')),
     ],
     install_requires=['setuptools'],
@@ -28,8 +29,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            "generic_agent = task2.the_agent:main",
-            "visualizer = task2.visualizer:main",
+            "task2_2_agent = task2.task2_2_agent:main",
             'task2_3_agent = task2.task2_3_agent:main',
             'central_visualizer = task2.centralized_visualizer:main',
         ],

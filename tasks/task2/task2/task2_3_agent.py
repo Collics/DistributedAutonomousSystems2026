@@ -5,7 +5,6 @@ import numpy as np
 from time import sleep
 from scipy.optimize import minimize, LinearConstraint
 
-# --- Updated Math without 'b' parameter ---
 def local_cost(zi, sigma, r_i, gamma_i, beta_i):
     return gamma_i * np.dot(zi - r_i, zi - r_i) + beta_i * np.dot(zi - sigma, zi - sigma)
  

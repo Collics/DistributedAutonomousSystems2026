@@ -1,26 +1,28 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
+import numpy as np
+import networkx as nx
 import os
 import datetime
 from ament_index_python.packages import get_package_share_directory
 import task2.task_config as cfg
-import numpy as np
 
 def generate_launch_description():
+
     rviz_config = os.path.join(
         get_package_share_directory('task2'),
         'config.rviz'
     )
     
-    timestamp = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-    bag_name = f'task2_3_bag_{timestamp}'
-
     node_list = []
-    package_name = "task2" 
+    package_name = "task2"
 
-    # All these variables (NN, obstacles, d_safe) come automatically from scenario_config.py!
-    viz_params = {"NN": cfg.NN, "obstacles": cfg.obstacles, "d_safe": cfg.d_safe, "plot_title": "Real-Time CBF-QP", "save_name": "task2_3_simulation_data.npy"}
+    viz_params = {
+        "NN": cfg.NN,
+        "plot_title": "Real-Time Aggregative Tracking (Task 2.2)",
+        "save_name": "task2_2_simulation_data.npy"
+    }
 
     for ii in range(cfg.NN):
         N_ii = np.nonzero(cfg.Adj[ii])[0].tolist()
@@ -33,7 +35,7 @@ def generate_launch_description():
             Node(
                 package=package_name,
                 namespace=f"agent_{ii}",
-                executable="task2_3_agent",
+                executable="task2_2_agent",
                 parameters=[{
                     "id": ii,
                     "stepsize": cfg.stepsize,
@@ -44,10 +46,7 @@ def generate_launch_description():
                     "weights": weights_ii,
                     "self_weight": float(self_weight),
                     "r": cfg.R_targets[ii].tolist(),
-                    "xzero": cfg.Z_init[ii].tolist(),
-                    "obstacles": cfg.obstacles,
-                    "d_safe": cfg.d_safe,
-                    "gamma_cbf": cfg.gamma_cbf
+                    "xzero": cfg.Z_init[ii].tolist()
                 }],
                 output="screen",
             )
@@ -55,17 +54,33 @@ def generate_launch_description():
 
     # Launch Central Visualizer Node
     node_list.append(
-        Node(package=package_name, executable="central_visualizer", name="central_viz", parameters=[viz_params], output="screen")
+        Node(
+            package=package_name,
+            executable="central_visualizer",
+            name="central_viz",
+            parameters=[viz_params],
+            output="screen",
+        )
     )
 
-    # Record Data
+    # Record all data via ros2 bag automatically
+    timestamp = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
+    bag_name = f'task2_2_bag_{timestamp}'
+    
     node_list.append(
-        ExecuteProcess(cmd=['ros2', 'bag', 'record', '-a', '-o', bag_name], output='screen')
+        ExecuteProcess(
+            cmd=['ros2', 'bag', 'record', '-a', '-o', bag_name],
+            output='screen'
+        )
     )
     
-    # Launch RViz
     node_list.append(
-        Node(package='rviz2', executable='rviz2', name='rviz2', arguments=['-d', rviz_config])
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            arguments=['-d', rviz_config],
+        )
     )
 
     return LaunchDescription(node_list)

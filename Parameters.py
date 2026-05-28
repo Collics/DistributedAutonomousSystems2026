@@ -40,7 +40,7 @@ RUN_TASK_2_1 = True
  
 TASK_2_1_N        = 6          # number of robots
 TASK_2_1_ALPHA    = 0.01       # step size
-TASK_2_1_MAX_ITER = 15000      # iterations
+TASK_2_1_MAX_ITER = 1000      # iterations
 TASK_2_1_GRAPH    = "cycle"    # 'cycle' | 'path' | 'star'
 TASK_2_1_ANIMATE  = True       # show animation (can be slow)
 

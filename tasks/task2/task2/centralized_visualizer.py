@@ -10,9 +10,16 @@ class CentralVisualizer(Node):
         super().__init__('central_visualizer', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
         
         self.NN = self.get_parameter('NN').value
-        obs_flat = self.get_parameter('obstacles').value
-        self.obstacles = np.array(obs_flat).reshape(-1, 2)
-        self.d_safe = self.get_parameter('d_safe').value
+        
+        # --- Unified Parameters ---
+        # Default to empty list/0.0 if obstacles aren't provided (Task 2.2)
+        obs_flat = self.get_parameter_or('obstacles', rclpy.Parameter('obstacles', rclpy.Parameter.Type.DOUBLE_ARRAY, [])).value
+        self.obstacles = np.array(obs_flat).reshape(-1, 2) if obs_flat else np.array([])
+        self.d_safe = self.get_parameter_or('d_safe', rclpy.Parameter('d_safe', rclpy.Parameter.Type.DOUBLE, 0.0)).value
+        
+        # Dynamic Titles and File Names
+        self.plot_title = self.get_parameter_or('plot_title', rclpy.Parameter('plot_title', rclpy.Parameter.Type.STRING, 'Real-Time Tracking')).value
+        self.save_name = self.get_parameter_or('save_name', rclpy.Parameter('save_name', rclpy.Parameter.Type.STRING, 'simulation_data.npy')).value
         
         self.agent_positions = {i: np.zeros(2) for i in range(self.NN)}
         self.targets = {i: np.array(self.get_parameter(f'target_{i}').value) for i in range(self.NN)}
@@ -28,7 +35,6 @@ class CentralVisualizer(Node):
         # Setup Matplotlib
         plt.ion()
         self.fig, self.ax = plt.subplots(figsize=(10, 6))
-        # Slow down the Matplotlib refresh rate slightly to match the slowed agents
         self.timer = self.create_timer(0.05, self.update_visuals) 
 
     def listener_callback(self, msg):
@@ -37,8 +43,11 @@ class CentralVisualizer(Node):
         self.agent_positions[agent_id] = np.array([x, y])
         self.history.append([int(msg.data[1]), agent_id, x, y])
 
+        self.rviz_pub.publish(self._make_marker(
+            agent_id + 200, 'agents', x, y, Marker.SPHERE, [1.0, 0.0, 1.0, 1.0], 0.4
+        ))
+
     def _make_marker(self, marker_id, ns, x, y, shape, color, scale=0.4):
-        """Helper to create RViz markers exactly like Task 2.2"""
         m = Marker()
         m.header.frame_id = 'map'
         m.header.stamp = self.get_clock().now().to_msg()
@@ -52,51 +61,45 @@ class CentralVisualizer(Node):
         m.pose.orientation.w = 1.0
         m.scale.x = float(scale)
         m.scale.y = float(scale)
-        if shape == Marker.CYLINDER:
-            m.scale.z = 0.1 # Flat cylinder for obstacles
-        else:
-            m.scale.z = float(scale)
+        m.scale.z = 0.1 if shape == Marker.CYLINDER else float(scale)
         m.color.r, m.color.g, m.color.b, m.color.a = color
         return m
 
     def update_visuals(self):
-        """Updates both Matplotlib and RViz in real-time"""
         # --- 1. Update Matplotlib ---
         self.ax.clear()
         
-        for obs in self.obstacles:
-            self.ax.add_patch(plt.Circle(obs, self.d_safe, color='tab:orange', alpha=0.3))
-            self.ax.plot(obs[0], obs[1], 'rx')
+        # Draw obstacles ONLY if they exist (Task 2.3)
+        if self.obstacles.size > 0:
+            for obs in self.obstacles:
+                self.ax.add_patch(plt.Circle(obs, self.d_safe, color='tab:orange', alpha=0.3))
+                self.ax.plot(obs[0], obs[1], 'rx')
 
+        # Draw Targets and Agents
         for i in range(self.NN):
             self.ax.plot(self.targets[i][0], self.targets[i][1], 'bx', markersize=10)
             self.ax.plot(self.agent_positions[i][0], self.agent_positions[i][1], 'go', markersize=8)
 
-        self.ax.set_xlim(-12, 12) 
+        self.ax.set_xlim(-12, 12)
         self.ax.set_ylim(-10, 10)
         self.ax.set_aspect('equal')
-        self.ax.set_title("Real-Time CBF-QP Tracking")
+        self.ax.set_title(self.plot_title)  # Dynamic Title
         self.ax.grid(True)
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
         # --- 2. Update RViz ---
-        # Draw Obstacles (Orange Cylinders)
-        for idx, obs in enumerate(self.obstacles):
-            # Scale is diameter, so 2 * d_safe
-            self.rviz_pub.publish(self._make_marker(idx, 'obstacles', obs[0], obs[1], Marker.CYLINDER, [1.0, 0.5, 0.0, 0.5], self.d_safe * 2.0))
+        if self.obstacles.size > 0:
+            for idx, obs in enumerate(self.obstacles):
+                self.rviz_pub.publish(self._make_marker(idx, 'obstacles', obs[0], obs[1], Marker.CYLINDER, [1.0, 0.5, 0.0, 0.5], self.d_safe * 2.0))
             
-        # Draw Targets (Red Cubes)
         for i in range(self.NN):
             self.rviz_pub.publish(self._make_marker(i + 100, 'targets', self.targets[i][0], self.targets[i][1], Marker.CUBE, [1.0, 0.0, 0.0, 1.0], 0.3))
-
-        # Draw Agents (Purple Spheres)
-        for i in range(self.NN):
             self.rviz_pub.publish(self._make_marker(i + 200, 'agents', self.agent_positions[i][0], self.agent_positions[i][1], Marker.SPHERE, [1.0, 0.0, 1.0, 1.0], 0.4))
 
     def save_data(self):
-        np.save('task2_3_simulation_data.npy', np.array(self.history))
-        print("Simulation data saved to 'task2_3_simulation_data.npy'.")
+        np.save(self.save_name, np.array(self.history))
+        print(f"Simulation data saved to '{self.save_name}'.")
 
 def main(args=None):
     rclpy.init(args=args)
