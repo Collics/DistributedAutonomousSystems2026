@@ -194,7 +194,8 @@ def run_ev(X, labels, phi_fn, mapping):
         print(f"    └─ Distributed : Accuracy {acc_rate_distr:6.2f}% | Missclassified: {missclass_distr}")
 
 
-        plot_task_1_3_metrics(cost_centr, grad_centr, distributed_cost_hist, distributed_grad_hist, mapping)
+    print("Metrics")
+    plot_task_1_3_metrics(cost_centr, grad_centr, distributed_cost_hist, distributed_grad_hist, mapping)
 
         
 

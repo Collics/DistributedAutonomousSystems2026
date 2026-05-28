@@ -52,7 +52,7 @@ B_HYPERBOLA = float(np.random.uniform(low=-2.0, high=2.0))
 ###############
 # TASK 1.3
 ###############
-TASK_1_3 = False
+TASK_1_3 = True
 
 TASK_1_3_GROUP_NUMBER = 6          # group number (determines P)
 TASK_1_3_N        = 5          # number of agents
@@ -65,7 +65,6 @@ TASK_1_3_RANGE     = (-2, 2)   # range for generating data
 ###############
 # TASK 2.1
 ###############
-<<<<<<< HEAD
 RUN_TASK_2_1 = False
 TASK_2_1_ANIMATE = True
 
