@@ -7,6 +7,7 @@ import os
 import datetime
 from ament_index_python.packages import get_package_share_directory
 import task2.task_config as cfg
+import shutil
 
 def generate_launch_description():
 
@@ -17,7 +18,8 @@ def generate_launch_description():
     
     node_list = []
     package_name = "task2"
-
+    bag_name = 'task2_2_bag'
+    
     viz_params = {
         "NN": cfg.NN,
         "plot_title": "Real-Time Aggregative Tracking (Task 2.2)",
@@ -64,14 +66,15 @@ def generate_launch_description():
     )
 
     # Record all data via ros2 bag automatically
-    timestamp = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-    bag_name = f'task2_2_bag_{timestamp}'
+ 
+    
+    # 2. Silently delete the old bag folder if it already exists
+    if os.path.exists(bag_name):
+        print(f"Overwriting old bag: {bag_name}")
+        shutil.rmtree(bag_name)
     
     node_list.append(
-        ExecuteProcess(
-            cmd=['ros2', 'bag', 'record', '-a', '-o', bag_name],
-            output='screen'
-        )
+        ExecuteProcess(cmd=['ros2', 'bag', 'record', '-a', '-o', bag_name], output='screen')
     )
     
     node_list.append(

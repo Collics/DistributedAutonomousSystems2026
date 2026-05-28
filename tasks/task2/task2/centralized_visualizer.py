@@ -11,11 +11,16 @@ class CentralVisualizer(Node):
         
         self.NN = self.get_parameter('NN').value
         
-        # --- Unified Parameters ---
-        # Default to empty list/0.0 if obstacles aren't provided (Task 2.2)
-        obs_flat = self.get_parameter_or('obstacles', rclpy.Parameter('obstacles', rclpy.Parameter.Type.DOUBLE_ARRAY, [])).value
-        self.obstacles = np.array(obs_flat).reshape(-1, 2) if obs_flat else np.array([])
-        self.d_safe = self.get_parameter_or('d_safe', rclpy.Parameter('d_safe', rclpy.Parameter.Type.DOUBLE, 0.0)).value
+        #  fetch obstacles (Default to empty array if missing)
+        obs_param = self.get_parameter('obstacles')
+        if obs_param.value is not None:
+            self.obstacles = np.array(obs_param.value).reshape(-1, 2)
+        else:
+            self.obstacles = np.array([]) 
+
+        # fetch d_safe (Default to 0.0 if missing)
+        d_safe_param = self.get_parameter('d_safe')
+        self.d_safe = d_safe_param.value if d_safe_param.value is not None else 0.0
         
         # Dynamic Titles and File Names
         self.plot_title = self.get_parameter_or('plot_title', rclpy.Parameter('plot_title', rclpy.Parameter.Type.STRING, 'Real-Time Tracking')).value
@@ -27,7 +32,7 @@ class CentralVisualizer(Node):
 
         # RViz Publisher
         self.rviz_pub = self.create_publisher(Marker, '/visualization_topic', 10)
-
+        self.create_timer(1.0, self.publish_static_env)
         # Passive Subscriptions
         for i in range(self.NN):
             self.create_subscription(MsgFloat, f'/topic_{i}', self.listener_callback, 10)
@@ -37,12 +42,29 @@ class CentralVisualizer(Node):
         self.fig, self.ax = plt.subplots(figsize=(10, 6))
         self.timer = self.create_timer(0.05, self.update_visuals) 
 
+    def publish_static_env(self):
+        """Draws the obstacles and targets in RViz before the bag starts."""
+        # 1. Publish Obstacles
+        if self.obstacles.size > 0:
+            for idx, obs in enumerate(self.obstacles):
+                self.rviz_pub.publish(self._make_marker(
+                    idx, 'obstacles', obs[0], obs[1], Marker.CYLINDER, [1.0, 0.5, 0.0, 0.5], self.d_safe * 2.0
+                ))
+                
+        # 2. Publish Targets
+        for i in range(self.NN):
+            self.rviz_pub.publish(self._make_marker(
+                i + 100, 'targets', self.targets[i][0], self.targets[i][1], Marker.CUBE, [1.0, 0.0, 0.0, 1.0], 0.3
+            ))
+    
     def listener_callback(self, msg):
         agent_id = int(msg.data[0])
         x, y = float(msg.data[2]), float(msg.data[3])
+        
         self.agent_positions[agent_id] = np.array([x, y])
         self.history.append([int(msg.data[1]), agent_id, x, y])
 
+        # Publish Agent instantly (Zero jitter)
         self.rviz_pub.publish(self._make_marker(
             agent_id + 200, 'agents', x, y, Marker.SPHERE, [1.0, 0.0, 1.0, 1.0], 0.4
         ))
@@ -87,15 +109,6 @@ class CentralVisualizer(Node):
         self.ax.grid(True)
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
-
-        # --- 2. Update RViz ---
-        if self.obstacles.size > 0:
-            for idx, obs in enumerate(self.obstacles):
-                self.rviz_pub.publish(self._make_marker(idx, 'obstacles', obs[0], obs[1], Marker.CYLINDER, [1.0, 0.5, 0.0, 0.5], self.d_safe * 2.0))
-            
-        for i in range(self.NN):
-            self.rviz_pub.publish(self._make_marker(i + 100, 'targets', self.targets[i][0], self.targets[i][1], Marker.CUBE, [1.0, 0.0, 0.0, 1.0], 0.3))
-            self.rviz_pub.publish(self._make_marker(i + 200, 'agents', self.agent_positions[i][0], self.agent_positions[i][1], Marker.SPHERE, [1.0, 0.0, 1.0, 1.0], 0.4))
 
     def save_data(self):
         np.save(self.save_name, np.array(self.history))

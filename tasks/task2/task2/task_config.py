@@ -8,11 +8,14 @@ import networkx as nx
 NN = 6         
 maxK = 1000     
 stepsize = 0.01
+OBSTACLES = True # Set to False for Task 2.2, True for Task 2.3
 
 # Task 2.3 specific parameters
 d_safe = 1.0
 gamma_cbf = 0.5
-obstacles = [0.0, 2.0, 2.0, -2.0] # Flat list for ROS parameters
+# ros needs a flat list, no nested arrays allowed here
+obstacles = [0.0, 2.0,
+             2.0, -2.0] if OBSTACLES else [] 
 
 # ==========================================
 # 2. ENVIRONMENT GEOMETRY

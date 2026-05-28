@@ -1,8 +1,8 @@
+import shutil
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
 import os
-import datetime
 from ament_index_python.packages import get_package_share_directory
 import task2.task_config as cfg
 import numpy as np
@@ -13,8 +13,7 @@ def generate_launch_description():
         'config.rviz'
     )
     
-    timestamp = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-    bag_name = f'task2_3_bag_{timestamp}'
+    bag_name = 'task2_3_bag'
 
     node_list = []
     package_name = "task2" 
@@ -58,7 +57,12 @@ def generate_launch_description():
         Node(package=package_name, executable="central_visualizer", name="central_viz", parameters=[viz_params], output="screen")
     )
 
-    # Record Data
+    
+    # 2. Silently delete the old bag folder if it already exists
+    if os.path.exists(bag_name):
+        print(f"Overwriting old bag: {bag_name}")
+        shutil.rmtree(bag_name)
+    
     node_list.append(
         ExecuteProcess(cmd=['ros2', 'bag', 'record', '-a', '-o', bag_name], output='screen')
     )
