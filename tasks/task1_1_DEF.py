@@ -9,7 +9,7 @@ import networkx as nx
 import numpy as np
 import Parameters as par
 from graph_utils import get_graph_and_matrix
-from plots import plot_task_1_1_summary_results, plot_task_1_1_network, plot_task_1_1_consensus_dynamics
+from plots import plot_task_1_1_summary_results, plot_task_1_1_overlying_summary_results, plot_task_1_1_network, plot_task_1_1_consensus_dynamics, plot_task_1_1_single_topology_results
 
 def compute_metrics_at_k(z_k):
     """
@@ -138,11 +138,15 @@ def task1_1():
 
         if par.TASK_1_1_PLOT_CONSENSUS:
             plot_task_1_1_consensus_dynamics(z, gt, z_star = z_star_1_1)
+            
+        if par.TASK_1_1_PLOT_SINGLE_RESULTS:
+            plot_task_1_1_single_topology_results(cost_hist, grad_norm_hist, consensus_hist, gt)
     
     if par.TASK_1_1_PLOT_NETWORK:
         plot_task_1_1_network(all_graphs)
     
     if par.TASK_1_1_PLOT_SUMMARY:
+        plot_task_1_1_overlying_summary_results(all_costs, all_grads, all_consensus)
         plot_task_1_1_summary_results(all_costs, all_grads, all_consensus)
         
             

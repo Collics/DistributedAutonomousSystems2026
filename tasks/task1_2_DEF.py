@@ -128,19 +128,22 @@ def task1_2():
     print(f"  Hyperbola dataset: {np.sum(labels_hyperbola == 1)} positive, {np.sum(labels_hyperbola == -1)} negative")
     
     # Plot comparison of datasets
-    plot_task_1_2_datasets(X, labels_parabola, labels_hyperbola, phi_parabola, phi_hyperbola, par.W_PARABOLA, par.B_PARABOLA, par.W_HYPERBOLA, par.B_HYPERBOLA, title_prefix="[Initial Datasets]")
+    if par.TASK_1_2_FUTURE_MAPPING:
+        plot_task_1_2_datasets(X, labels_parabola, labels_hyperbola, phi_parabola, phi_hyperbola, par.W_PARABOLA, par.B_PARABOLA, par.W_HYPERBOLA, par.B_HYPERBOLA, title_prefix="[Initial Datasets]")
     
     # Centralized gradient descent
     print("\n --- Running centralized gradient descent --- ")
 
     print("\n  - Logistic Regression: Parabola")
     theta_parabola, cost_hist_parabola, grad_norm_hist_parabola = centralized_gradient_descent(X, phi_parabola, labels_parabola, stepsize, max_iter)
-    plot_task_1_2_metrics(cost_hist_parabola, grad_norm_hist_parabola, "Parabola Mapping")
+    if par.TASK_1_2_METRICS:
+        plot_task_1_2_metrics(cost_hist_parabola, grad_norm_hist_parabola, "Parabola Mapping")
     print(f"  Final weights: {theta_parabola[:-1]}, bias: {theta_parabola[-1]:.4f}")
 
     print("\n  - Logistic Regression: Hyperbola")
     theta_hyperbola, cost_hist_hyperbola, grad_norm_hist_hyperbola = centralized_gradient_descent(X, phi_hyperbola, labels_hyperbola, stepsize, max_iter)
-    plot_task_1_2_metrics(cost_hist_hyperbola, grad_norm_hist_hyperbola, "Hyperbola Mapping")
+    if par.TASK_1_2_METRICS:
+        plot_task_1_2_metrics(cost_hist_hyperbola, grad_norm_hist_hyperbola, "Hyperbola Mapping")
     print(f"  Final weights: {theta_hyperbola[:-1]}, bias: {theta_hyperbola[-1]:.4f}")
 
     print("\n --- Performance Evaluation --- ")
@@ -168,4 +171,5 @@ def task1_2():
     print(f"    - Missclassified for label -1: {np.sum((pred_labels_hyperbola == 1) & (labels_hyperbola == -1))}")
     print(f"    - Accuracy: {acc_rate_hyperbola:.2f}%")
 
-    plot_task_1_2_datasets(X, pred_labels_parabola, pred_labels_hyperbola, phi_parabola, phi_hyperbola, w_learned_parabola, b_learned_parabola, w_learned_hyperbola, b_learned_hyperbola,"Learned Decision Boundaries")
+    if par.TASK_1_2_FUTURE_MAPPING:    
+        plot_task_1_2_datasets(X, pred_labels_parabola, pred_labels_hyperbola, phi_parabola, phi_hyperbola, w_learned_parabola, b_learned_parabola, w_learned_hyperbola, b_learned_hyperbola,"Learned Decision Boundaries")

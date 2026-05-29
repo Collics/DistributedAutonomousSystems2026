@@ -26,6 +26,7 @@ for i in range(TASK_1_1_N):
 # Flags for plotting
 TASK_1_1_PLOT_CONSENSUS = True
 TASK_1_1_PLOT_NETWORK = True
+TASK_1_1_PLOT_SINGLE_RESULTS = True
 TASK_1_1_PLOT_SUMMARY = True
 
 ###############
@@ -38,16 +39,29 @@ TASK_1_2_M = 500   # total dataset size
 TASK_1_2_RANGE = (-2, 2)  # range for generating data
 TASK_1_2_STEPSIZE = 5e-4   # step size
 TASK_1_2_MAX_ITER = 1000
+TASK_1_2_RANDOM_MAPPING = False 
 
 # Parabola Mapping Parameters (phi_parabola = [x1, x2, x1^2].T)
-# Dimension q = 3
-W_PARABOLA = np.random.uniform(low=-2.0, high=2.0, size=3).tolist()
-B_PARABOLA = float(np.random.uniform(low=-2.0, high=2.0))
+W_PARABOLA = [0.0, -1.0, 1.0] 
+B_PARABOLA = - 1.0
 
-# Hyperbola Mapping Parameters (phi_hyperbola = [x1, x2, x1·x2].T) ---
 # Dimension q = 3
-W_HYPERBOLA = np.random.uniform(low=-2.0, high=2.0, size=3).tolist()
-B_HYPERBOLA = float(np.random.uniform(low=-2.0, high=2.0))
+W_HYPERBOLA = [0.0, 0.0, 1.0] 
+B_HYPERBOLA = - 0.5
+
+if TASK_1_2_RANDOM_MAPPING:
+    # Dimension q = 3
+    W_PARABOLA = np.random.uniform(low=-2.0, high=2.0, size=3).tolist()
+    B_PARABOLA = float(np.random.uniform(low=-2.0, high=2.0))
+
+    # Hyperbola Mapping Parameters (phi_hyperbola = [x1, x2, x1·x2].T) ---
+    # Dimension q = 3
+    W_HYPERBOLA = np.random.uniform(low=-2.0, high=2.0, size=3).tolist()
+    B_HYPERBOLA = float(np.random.uniform(low=-2.0, high=2.0))
+
+# Flags for plotting
+TASK_1_2_FUTURE_MAPPING = True
+TASK_1_2_METRICS = True
 
 ###############
 # TASK 1.3
@@ -61,6 +75,12 @@ TASK_1_3_STEPSIZE = 0.005
 TASK_1_3_MAX_ITER = 1000
 TASK_1_3_RANGE     = (-2, 2)   # range for generating data
 
+# Flags for plotting
+TASK_1_3_DATA_SPLIT = False
+TASK_1_3_FUTURE_MAPPING = False
+TASK_1_3_PLOT_CONSENSUS = False
+TASK_1_3_PLOT_SINGLE_RESULTS = False
+TASK_1_3_METRICS = False
 
 ###############
 # TASK 2.1
@@ -77,7 +97,7 @@ TASK_2_1_ANIMATE  = True       # show animation (can be slow)
 ###############
 # TASK 2.3
 ###############
-RUN_TASK_2_3 = True
+RUN_TASK_2_3 = False
 
 TASK_2_3_N = 6                # Number of agents
 TASK_2_3_MAX_ITER = 500      # Iterations

@@ -10,7 +10,7 @@ import networkx as nx
 import Parameters as par
 from graph_utils import get_graph_and_matrix
 from tasks.task1_2_DEF import centralized_gradient_descent, phi_parabola, phi_hyperbola, generate_dataset
-from plots import plot_task_1_1_consensus_dynamics, plot_task1_3_data_split, plot_task_1_3_individual_distr_metrics, plot_task_1_3_metrics
+from plots import plot_task_1_1_consensus_dynamics, plot_task1_3_data_split, plot_task_1_3_individual_distr_metrics, plot_task_1_3_metrics, plot_task1_3_dataset_boundary
 # ──────────────────────────────────────────────────────────────
 #  Dataset splitting
 # ──────────────────────────────────────────────────────────────
@@ -123,6 +123,19 @@ def run_ev(X, labels, phi_fn, mapping):
     # --- Data Splitting for Distributed Algorithm ────────────────────────────────────────────
     agents = split_dataset_even_groups(X, labels)
 
+    # True boundary parameters from Parameters.py
+    if mapping.lower() == "parabola":
+        w_true = par.W_PARABOLA
+        b_true = par.B_PARABOLA
+    else:
+        w_true = par.W_HYPERBOLA
+        b_true = par.B_HYPERBOLA
+    wb_true = np.concatenate([w_true, [b_true]])
+    
+    # Plot dataset with true boundary
+    if par.TASK_1_3_FUTURE_MAPPING:
+        plot_task1_3_dataset_boundary(agents, phi_fn, wb=wb_true, map_name=f"{mapping} (True Boundary)", data_range=par.TASK_1_3_RANGE)
+
     distributed_cost_hist = {}
     distributed_grad_hist = {}
 
@@ -173,8 +186,11 @@ def run_ev(X, labels, phi_fn, mapping):
         distributed_cost_hist[gt] = cost_hist
         distributed_grad_hist[gt] = grad_hist
 
-        plot_task_1_1_consensus_dynamics(z, gt, z_star = theta_centr)
-        plot_task_1_3_individual_distr_metrics(cost_centr, grad_centr, cost_hist, grad_hist, gt, mapping_name = mapping)
+        if par.TASK_1_3_PLOT_CONSENSUS:
+            plot_task_1_1_consensus_dynamics(z, gt, z_star = theta_centr)
+        if par.TASK_1_3_PLOT_SINGLE_RESULTS:
+            plot_task_1_3_individual_distr_metrics(cost_centr, grad_centr, cost_hist, grad_hist, gt, mapping_name = mapping)
+            plot_task1_3_dataset_boundary(agents, phi_fn, wb=z[-1], map_name=f"{mapping} - Learned ({gt})", data_range=par.TASK_1_3_RANGE)
 
         print("\n --- Performance Evaluation --- ")
         # --- Centralised baseline results
@@ -194,8 +210,8 @@ def run_ev(X, labels, phi_fn, mapping):
         print(f"    └─ Distributed : Accuracy {acc_rate_distr:6.2f}% | Missclassified: {missclass_distr}")
 
 
-    print("Metrics")
-    plot_task_1_3_metrics(cost_centr, grad_centr, distributed_cost_hist, distributed_grad_hist, mapping)
+    if par.TASK_1_3_METRICS:
+        plot_task_1_3_metrics(cost_centr, grad_centr, distributed_cost_hist, distributed_grad_hist, mapping)
 
         
 
@@ -221,7 +237,8 @@ def task1_3():
         agents_dataset = split_dataset_even_groups(X, labels) # labels for splitting (not used in this form)
         agents_X = [agent_data['X'] for agent_data in agents_dataset]
 
-        plot_task1_3_data_split(agents_X, f"Data Split for M={M}")
+        if par.TASK_1_3_DATA_SPLIT:
+            plot_task1_3_data_split(agents_X, f"Data Split for M={M}")
 
         labels_parabola = generate_dataset(X, w=par.W_PARABOLA, b=par.B_PARABOLA, phi_fn=phi_parabola)
         labels_hyperbola = generate_dataset(X, w=par.W_HYPERBOLA, b=par.B_HYPERBOLA, phi_fn=phi_hyperbola)

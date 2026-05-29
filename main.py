@@ -6,8 +6,8 @@ from plots import (
     plot_task2_1_trajectories,
     plot_task2_1_comparison,
     animate_task2_1,
-    
 )
+
 from tasks.task1_1_DEF import task1_1
 from tasks.task1_2_DEF import task1_2
 from tasks.task1_3_DEF import task1_3
