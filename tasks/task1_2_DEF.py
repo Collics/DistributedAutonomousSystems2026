@@ -7,7 +7,7 @@
 
 import numpy as np
 import Parameters as par
-from plots import plot_task_1_2_datasets, plot_task_1_2_metrics
+from plots import plot_task_1_2_datasets, plot_task_1_2_metrics, plot_task_1_2_boundary_comparison
 
 
 # ─────────────────────────────────────────────
@@ -173,3 +173,5 @@ def task1_2():
 
     if par.TASK_1_2_FUTURE_MAPPING:    
         plot_task_1_2_datasets(X, pred_labels_parabola, pred_labels_hyperbola, phi_parabola, phi_hyperbola, w_learned_parabola, b_learned_parabola, w_learned_hyperbola, b_learned_hyperbola,"Learned Decision Boundaries")
+    if par.TASK_1_2_FUTURE_MAPPING_COMPARISON:
+        plot_task_1_2_boundary_comparison(X, labels_parabola, labels_hyperbola, phi_parabola, phi_hyperbola, par.W_PARABOLA, par.B_PARABOLA, w_learned_parabola, b_learned_parabola, par.W_HYPERBOLA, par.B_HYPERBOLA, w_learned_hyperbola, b_learned_hyperbola, title_prefix="Boundary Comparison - True vs Learned")

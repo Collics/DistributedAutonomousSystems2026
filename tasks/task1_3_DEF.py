@@ -10,7 +10,7 @@ import networkx as nx
 import Parameters as par
 from graph_utils import get_graph_and_matrix
 from tasks.task1_2_DEF import centralized_gradient_descent, phi_parabola, phi_hyperbola, generate_dataset
-from plots import plot_task_1_1_consensus_dynamics, plot_task1_3_data_split, plot_task_1_3_individual_distr_metrics, plot_task_1_3_metrics, plot_task1_3_dataset_boundary
+from plots import plot_task_1_1_consensus_dynamics, plot_task1_3_data_split, plot_task_1_3_individual_distr_metrics, plot_task_1_3_metrics, plot_task1_3_dataset_boundary, plot_task_1_3_boundary_comparison
 # ──────────────────────────────────────────────────────────────
 #  Dataset splitting
 # ──────────────────────────────────────────────────────────────
@@ -190,7 +190,10 @@ def run_ev(X, labels, phi_fn, mapping):
             plot_task_1_1_consensus_dynamics(z, gt, z_star = theta_centr)
         if par.TASK_1_3_PLOT_SINGLE_RESULTS:
             plot_task_1_3_individual_distr_metrics(cost_centr, grad_centr, cost_hist, grad_hist, gt, mapping_name = mapping)
+        if par.TASK_1_3_FUTURE_MAPPING:
             plot_task1_3_dataset_boundary(agents, phi_fn, wb=z[-1], map_name=f"{mapping} - Learned ({gt})", data_range=par.TASK_1_3_RANGE)
+        if par.TASK_1_3_FUTURE_MAPPING_COMPARISON:
+            plot_task_1_3_boundary_comparison(agents, phi_fn, wb_true=wb_true, wb_learned=z[-1], map_name=f"{mapping} ({gt})", data_range=par.TASK_1_3_RANGE)
 
         print("\n --- Performance Evaluation --- ")
         # --- Centralised baseline results

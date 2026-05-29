@@ -169,9 +169,9 @@ def plot_task_1_2_datasets(X, labels_cubic, labels_super, phi_c=None, phi_s=None
 
     for ax, conf in zip(axes, configs):
         ax.scatter(X[conf["labels"] == 1, 0], X[conf["labels"] == 1, 1], 
-                   color='#8A2BE2', marker='^', label='+1 (Healthy)', alpha=0.6, s=25, edgecolors='none')
+                   color='#8A2BE2', marker='^', label='+1', alpha=0.6, s=25, edgecolors='none')
         ax.scatter(X[conf["labels"] == -1, 0], X[conf["labels"] == -1, 1], 
-                   color='#FF8C00', marker='v', label='-1 (Defective)', alpha=0.6, s=25, edgecolors='none')
+                   color='#FF8C00', marker='v', label='-1', alpha=0.6, s=25, edgecolors='none')
         
         if conf["w"] is not None and conf["b"] is not None and conf["phi"] is not None:
             Z = np.zeros(X_mesh.shape)
@@ -191,6 +191,77 @@ def plot_task_1_2_datasets(X, labels_cubic, labels_super, phi_c=None, phi_s=None
 
     plt.tight_layout()
     plt.show()
+
+
+def plot_task_1_2_boundary_comparison(X, labels_cubic, labels_super, phi_c, phi_s, 
+                                      w_true_c, b_true_c, w_learned_c, b_learned_c, 
+                                      w_true_s, b_true_s, w_learned_s, b_learned_s, 
+                                      title_prefix=""):
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(14, 6), sharex=True, sharey=True)
+    fig.suptitle(f"{title_prefix}", fontsize=14, fontweight="bold")
+    
+    configs = [
+        {
+            "name": "Parabola",
+            "labels": labels_cubic,
+            "phi": phi_c,
+            "w_true": w_true_c,
+            "b_true": b_true_c,
+            "w_learned": w_learned_c,
+            "b_learned": b_learned_c,
+            "ax": axes[0]
+        },
+        {
+            "name": "Hyperbola",
+            "labels": labels_super,
+            "phi": phi_s,
+            "w_true": w_true_s,
+            "b_true": b_true_s,
+            "w_learned": w_learned_s,
+            "b_learned": b_learned_s,
+            "ax": axes[1]
+        }
+    ]
+    
+    x_range = np.linspace(par.TASK_1_2_RANGE[0], par.TASK_1_2_RANGE[1], 100)
+    y_range = np.linspace(par.TASK_1_2_RANGE[0], par.TASK_1_2_RANGE[1], 100)
+    X_mesh, Y_mesh = np.meshgrid(x_range, y_range)
+    pts = np.column_stack([X_mesh.ravel(), Y_mesh.ravel()])
+
+    for conf in configs:
+        ax = conf["ax"]
+        labels = conf["labels"]
+        phi = conf["phi"]
+        
+        # Scatter points (matching Task 1.2 style)
+        ax.scatter(X[labels == 1, 0], X[labels == 1, 1], 
+                   color='#8A2BE2', marker='^', label='+1', alpha=0.6, s=25, edgecolors='none')
+        ax.scatter(X[labels == -1, 0], X[labels == -1, 1], 
+                   color='#FF8C00', marker='v', label='-1', alpha=0.6, s=25, edgecolors='none')
+        
+        Phi_grid = phi(pts)
+        
+        # 1. Plot True Boundary (slate gray dash-dotted line)
+        if conf["w_true"] is not None and conf["b_true"] is not None:
+            Z_true = (Phi_grid @ conf["w_true"] + conf["b_true"]).reshape(X_mesh.shape)
+            ax.contour(X_mesh, Y_mesh, Z_true, levels=[0], colors='#2F4F4F', linestyles='-.', linewidths=2.5)
+            ax.plot([], [], color='#2F4F4F', linestyle='-.', linewidth=2.5, label='True Boundary (Real)')
+            
+        # 2. Plot Learned Boundary (royal blue solid line)
+        if conf["w_learned"] is not None and conf["b_learned"] is not None:
+            Z_learned = (Phi_grid @ conf["w_learned"] + conf["b_learned"]).reshape(X_mesh.shape)
+            ax.contour(X_mesh, Y_mesh, Z_learned, levels=[0], colors='#4169E1', linestyles='-', linewidths=2.5)
+            ax.plot([], [], color='#4169E1', linestyle='-', linewidth=2.5, label='Learned Boundary')
+
+        ax.set_title(f"{conf['name']} Feature Mapping", fontweight='bold')
+        ax.set_xlabel(r"$x_1$")
+        ax.set_ylabel(r"$x_2$")
+        ax.set_aspect('equal')
+        ax.legend(loc='upper right', framealpha=0.9)
+
+    plt.tight_layout()
+    plt.show()
+    return fig
 
 def plot_task_1_2_metrics(cost_hist, grad_hist, title):
     fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
@@ -282,7 +353,7 @@ def plot_task1_3_data_split(agents_data, title_prefix="Task 1.3"):
     fig.suptitle(f"{title_prefix} – Agent Dataset Allocation", fontsize=14, fontweight="bold")
  
     for i, data in enumerate(agents_data):
-        ax.scatter(data[:, 0], data[:, 1], color=cmap(i), marker='p', label=f"Node {i + 1}", alpha=0.75, edgecolors="white", s=45)
+        ax.scatter(data[:, 0], data[:, 1], color=cmap(i), marker='s', label=f"Node {i + 1}", alpha=0.75, edgecolors="white", s=45)
  
     ax.set_xlabel(r"$x_1$")
     ax.set_ylabel(r"$x_2$")
@@ -314,9 +385,9 @@ def plot_task1_3_dataset_boundary(agents_data, phi_fn=None, wb=None, map_name=""
     # ── LEFT PLOT: Global classification (Task 1.2 style) ───────────────────────────
     ax_left = axes[0]
     ax_left.scatter(X[labels == 1, 0], X[labels == 1, 1], 
-                    color='#8A2BE2', marker='^', label='+1 (Healthy)', alpha=0.6, s=25, edgecolors='none')
+                    color='#8A2BE2', marker='^', label='+1', alpha=0.6, s=25, edgecolors='none')
     ax_left.scatter(X[labels == -1, 0], X[labels == -1, 1], 
-                    color='#FF8C00', marker='s', label='-1 (Defective)', alpha=0.6, s=25, edgecolors='none')
+                    color='#FF8C00', marker='v', label='-1', alpha=0.6, s=25, edgecolors='none')
     
     grid = np.linspace(data_range[0], data_range[1], 200)
     Xm, Ym = np.meshgrid(grid, grid)
@@ -366,7 +437,7 @@ def plot_task1_3_dataset_boundary(agents_data, phi_fn=None, wb=None, map_name=""
         neg_idx = (labels_i == -1)
         if np.any(neg_idx):
             ax_right.scatter(X_i[neg_idx, 0], X_i[neg_idx, 1],
-                             color=color, marker='s', alpha=0.8, s=35, edgecolors='none',
+                             color=color, marker='v', alpha=0.8, s=35, edgecolors='none',
                              label=label_text)
                              
     # Plot individual agent boundaries and consensus boundary on the right
@@ -402,12 +473,76 @@ def plot_task1_3_dataset_boundary(agents_data, phi_fn=None, wb=None, map_name=""
     ax_right.set_aspect("equal")
     
     # Add proxy class markers for the right plot legend
-    ax_right.scatter([], [], marker='^', color='gray', label='+1 (Healthy)', edgecolors='none')
-    ax_right.scatter([], [], marker='s', color='gray', label='-1 (Defective)', edgecolors='none')
+    ax_right.scatter([], [], marker='^', color='gray', label='+1', edgecolors='none')
+    ax_right.scatter([], [], marker='v', color='gray', label='-1', edgecolors='none')
     
     # Place legend to the right of the right plot
     ax_right.legend(bbox_to_anchor=(1.02, 0.5), loc="center left", framealpha=0.9, fontsize=8)
     
+    plt.tight_layout()
+    plt.show()
+    return fig
+
+
+def plot_task_1_3_boundary_comparison(agents_data, phi_fn, wb_true, wb_learned, map_name="", data_range=(-2, 2)):
+    """
+    Overlays the true decision boundary and the learned consensus decision boundary
+    on the same plot containing the scattered data points.
+    """
+    fig, ax = plt.subplots(figsize=(7, 6))
+    fig.suptitle(f"Boundary Comparison – True vs Learned ({map_name})", fontsize=13, fontweight="bold")
+    
+    # Aggregate data points to plot in the background
+    X_all = []
+    labels_all = []
+    for agent in agents_data:
+        X_all.append(agent["X"])
+        labels_all.append(agent["labels"])
+    
+    X = np.vstack(X_all)
+    labels = np.concatenate(labels_all)
+    
+    # Scatter points
+    ax.scatter(X[labels == 1, 0], X[labels == 1, 1], color='#8A2BE2', marker='^', label='+1', alpha=0.6, s=25, edgecolors='none')
+    ax.scatter(X[labels == -1, 0], X[labels == -1, 1], color='#FF8C00', marker='v', label='-1', alpha=0.6, s=25, edgecolors='none')
+    
+    # Grid for drawing the contours
+    grid = np.linspace(data_range[0], data_range[1], 200)
+    Xm, Ym = np.meshgrid(grid, grid)
+    pts = np.column_stack([Xm.ravel(), Ym.ravel()])
+    Phi_grid = phi_fn(pts)
+    
+    # 1. Plot True Boundary 
+    Z_true = (Phi_grid @ wb_true[:-1] + wb_true[-1]).reshape(Xm.shape)
+    ax.contour(Xm, Ym, Z_true, levels=[0], colors='#2F4F4F', linestyles='-.', linewidths=2.5)
+    ax.plot([], [], color='#2F4F4F', linestyle='-.', linewidth=2.5, label='True Boundary (Real)')
+    
+    # 2. Plot Learned Boundary 
+    wb_learned = np.array(wb_learned)
+    if wb_learned.ndim == 2:
+        wb_learned_mean = np.mean(wb_learned, axis=0)
+    else:
+        wb_learned_mean = wb_learned
+        
+    Z_learned = (Phi_grid @ wb_learned_mean[:-1] + wb_learned_mean[-1]).reshape(Xm.shape)
+    ax.contour(Xm, Ym, Z_learned, levels=[0], colors='#4169E1', linestyles='-', linewidths=2.5)
+    ax.plot([], [], color='#4169E1', linestyle='-', linewidth=2.5, label='Learned Consensus Boundary')
+
+    # If wb_learned is a matrix, plot individual agent boundaries as thin dashed lines
+    if wb_learned.ndim == 2:
+        N = wb_learned.shape[0]
+        cmap = plt.get_cmap("Set2")  # Match agent colormap
+        for i in range(N):
+            wb_i = wb_learned[i]
+            Z_i = (Phi_grid @ wb_i[:-1] + wb_i[-1]).reshape(Xm.shape)
+            color = cmap(i)
+            ax.contour(Xm, Ym, Z_i, levels=[0], colors=[color], linestyles='--', linewidths=1.2, alpha=0.6)
+        ax.plot([], [], color='gray', linestyle='--', linewidth=1.2, label='Individual Agent Boundaries')
+
+    ax.set_xlabel(r"$x_1$")
+    ax.set_ylabel(r"$x_2$")
+    ax.set_aspect("equal")
+    ax.legend(loc="upper right", framealpha=0.9, fontsize=9)
     plt.tight_layout()
     plt.show()
     return fig

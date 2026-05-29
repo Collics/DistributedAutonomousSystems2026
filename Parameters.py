@@ -32,7 +32,7 @@ TASK_1_1_PLOT_SUMMARY = True
 ###############
 # TASK 1.2 
 ###############
-TASK_1_2 = False
+TASK_1_2 = True
 
 TASK_1_2_M = 500   # total dataset size
 
@@ -61,6 +61,7 @@ if TASK_1_2_RANDOM_MAPPING:
 
 # Flags for plotting
 TASK_1_2_FUTURE_MAPPING = True
+TASK_1_2_FUTURE_MAPPING_COMPARISON = True
 TASK_1_2_METRICS = True
 
 ###############
@@ -76,11 +77,12 @@ TASK_1_3_MAX_ITER = 1000
 TASK_1_3_RANGE     = (-2, 2)   # range for generating data
 
 # Flags for plotting
-TASK_1_3_DATA_SPLIT = False
-TASK_1_3_FUTURE_MAPPING = False
-TASK_1_3_PLOT_CONSENSUS = False
-TASK_1_3_PLOT_SINGLE_RESULTS = False
-TASK_1_3_METRICS = False
+TASK_1_3_DATA_SPLIT = True
+TASK_1_3_FUTURE_MAPPING = True
+TASK_1_3_FUTURE_MAPPING_COMPARISON = True
+TASK_1_3_PLOT_CONSENSUS = True
+TASK_1_3_PLOT_SINGLE_RESULTS = True
+TASK_1_3_METRICS = True
 
 ###############
 # TASK 2.1
