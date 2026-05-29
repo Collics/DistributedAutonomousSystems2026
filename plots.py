@@ -528,17 +528,6 @@ def plot_task_1_3_boundary_comparison(agents_data, phi_fn, wb_true, wb_learned, 
     ax.contour(Xm, Ym, Z_learned, levels=[0], colors='#4169E1', linestyles='-', linewidths=2.5)
     ax.plot([], [], color='#4169E1', linestyle='-', linewidth=2.5, label='Learned Consensus Boundary')
 
-    # If wb_learned is a matrix, plot individual agent boundaries as thin dashed lines
-    if wb_learned.ndim == 2:
-        N = wb_learned.shape[0]
-        cmap = plt.get_cmap("Set2")  # Match agent colormap
-        for i in range(N):
-            wb_i = wb_learned[i]
-            Z_i = (Phi_grid @ wb_i[:-1] + wb_i[-1]).reshape(Xm.shape)
-            color = cmap(i)
-            ax.contour(Xm, Ym, Z_i, levels=[0], colors=[color], linestyles='--', linewidths=1.2, alpha=0.6)
-        ax.plot([], [], color='gray', linestyle='--', linewidth=1.2, label='Individual Agent Boundaries')
-
     ax.set_xlabel(r"$x_1$")
     ax.set_ylabel(r"$x_2$")
     ax.set_aspect("equal")
