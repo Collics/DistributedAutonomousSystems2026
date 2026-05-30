@@ -21,14 +21,28 @@ def grad2_li(zi, sigma, beta_i):
     return -2.0 * beta_i * (zi - sigma)
 
 def generate_safe_initial_positions(N, box_size=5.0, min_dist=0.5, offset_x=0.0, offset_y=0.0):
+    """
+    Generates N random initial positions for the robots, ensuring they don't overlap.
+    """
+    # Initialize an array of shape (N, 2) with zeros to store the coordinates (x, y)
     z0 = np.zeros((N, 2))
+
     for i in range(N):
         while True:
+            # Generate a random candidate position (x, y) within the defined box_size.
+            # Add offsets to shift the entire generation area if needed.
+
             candidate = np.random.uniform(0, box_size, 2) + np.array([offset_x, offset_y])
+            # If it's the first robot (i=0), there's no one else to collide with.
+            # We accept the candidate and break the while loop.
             if i == 0:
                 z0[i] = candidate
                 break
+            # For all subsequent robots, calculate the distance between the new candidate
+            # and all previously placed robots (z0[:i]).
             distances = np.linalg.norm(z0[:i] - candidate, axis=1)
+
+            # Check if the candidate is far enough (>= min_dist) from ALL existing robots.
             if np.all(distances >= min_dist):
                 z0[i] = candidate
                 break
@@ -93,7 +107,7 @@ def _compute_metrics(z, r_targets, gamma, beta, N, max_iters):
 
 def _run_single_scenario(N, max_iters, stepsize, gamma_val, beta_val, target_shape, graph_type, z_init, label):
     """Executes the algorithm for a specific set of parameters and returns the scenario dict."""
-    print(f"  [Running] {label} (γ={gamma_val}, λ={beta_val}, shape={target_shape})")
+    print(f"  [Running] {label} (γ={gamma_val}, β={beta_val}, shape={target_shape})")
     
     r_targets = generate_target_geometry(N, shape=target_shape, scale=3.0, center=[6.0, 6.0])
     gamma = np.ones(N) * gamma_val
@@ -182,7 +196,7 @@ def run_task2_1():
     np.random.seed(0) 
     z_init = generate_safe_initial_positions(N, box_size=5.0, min_dist=0.5, offset_x=-10.0)
 
-    opt_gamma, opt_lambda = getattr(par, 'TASK_2_1_PARAM', (1.0, 1.0))
+    opt_gamma, opt_beta = getattr(par, 'TASK_2_1_PARAM', (1.0, 1.0))
     base_shape = 'hexagon'
     base_graph = 'cycle'
 
@@ -206,7 +220,7 @@ def run_task2_1():
     
     scenarios_geom = []
     for shape in shapes:
-        sc = _run_single_scenario(N, max_iters, stepsize, opt_gamma, opt_lambda, shape, base_graph, z_init, shape.capitalize())
+        sc = _run_single_scenario(N, max_iters, stepsize, opt_gamma, opt_beta, shape, base_graph, z_init, shape.capitalize())
         scenarios_geom.append(sc)
 
     # ---------------------------------------------------------
@@ -217,7 +231,7 @@ def run_task2_1():
     
     scenarios_graphs = []
     for g in graphs:
-        sc = _run_single_scenario(N, max_iters, stepsize, opt_gamma, opt_lambda, base_shape, g, z_init, f"{g.capitalize()} Graph")
+        sc = _run_single_scenario(N, max_iters, stepsize, opt_gamma, opt_beta, base_shape, g, z_init, f"{g.capitalize()} Graph")
         scenarios_graphs.append(sc)
 
     # Return grouped dictionaries
