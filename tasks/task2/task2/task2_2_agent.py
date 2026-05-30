@@ -59,7 +59,7 @@ class Agent(Node):
                 MsgFloat,
                 f"/topic_{j:.0f}",
                 self.listener_callback,
-                10,
+                1000,
             )
 
         self.received_data = {j: [] for j in self.neighbors}
@@ -67,7 +67,7 @@ class Agent(Node):
         self.publisher = self.create_publisher(
             MsgFloat,
             f"/topic_{self.agent_id:.0f}",
-            10,
+            1000,
         )
 
         # Timer (slowed down slightly to 0.05 to allow visualizer to keep up)
@@ -149,7 +149,7 @@ class Agent(Node):
 def main(args=None):
     rclpy.init(args=args)
     anAgent = Agent()
-    sleep(1)  
+    sleep(5.0)  
     
     try:
         rclpy.spin(anAgent)

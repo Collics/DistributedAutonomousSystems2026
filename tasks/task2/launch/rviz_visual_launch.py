@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import ExecuteProcess, TimerAction
 
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -9,49 +10,80 @@ import task2.task_config as cfg
 This launch file is designed for visualizing ROS 2 bag files that were recorded during Task 2.2 or Task 2.3 simulations.
 
 To use this launch file:
-1. launch either
+1. In task2/task2/task_config.py set:
+        OBSTACLES = False  # for Task 2.2
+        OBSTACLES = True   # for Task 2.3
+
+2. Record a bag file launching either
         ros2 launch task2 task2_2_launch.py
         ros2 launch task2 task2_3_launch.py
-    to record a bag file of the simulation.
-    
-2. launch this file specifying the task (defaults to 2.3 if left blank):
+        
+3. launch this file:
         ros2 launch task2 rviz_visual_launch.py 
 
-3. in another terminal, play the bag file you recorded with:
-        ros2 bag play <your_bag_file_name>
 '''
+
+
 
 
 def generate_launch_description():
     rviz_config = os.path.join(get_package_share_directory('task2'), 'config.rviz')
 
-    # Base parameters that ALL tasks need
+    # Dynamically find the src/task2/task2/data folder
+    launch_dir = os.path.dirname(os.path.realpath(__file__))
+    data_dir = os.path.abspath(os.path.join(launch_dir, '..', 'task2', 'data'))
+    os.makedirs(data_dir, exist_ok=True)
+
+    # Force the visualizer to save the .npy file inside the data folder
+    npy_path = os.path.join(data_dir, 'playback_data.npy')
+
     viz_params = {
         "NN": cfg.NN,
         "plot_title": "ROS 2 Bag Playback",
-        "save_name": "playback_data.npy"
+        "save_name": npy_path 
     }
     
     for ii in range(cfg.NN):
         viz_params[f"target_{ii}"] = cfg.R_targets[ii].tolist()
 
-    # ONLY add obstacle parameters if they actually exist in the config!
+    # Read config to set obstacles and determine WHICH bag to play!
     if len(cfg.obstacles) > 0:
         viz_params["obstacles"] = cfg.obstacles
         viz_params["d_safe"] = cfg.d_safe
+        bag_name = os.path.join(data_dir, 'task2_3_bag')  # Obstacles exist, must be Task 2.3
+    else:
+        bag_name = os.path.join(data_dir, 'task2_2_bag')  # No obstacles, must be Task 2.2
+
+    # 1. Visualizer Node
+    viz_node = Node(
+        package="task2",
+        executable="central_visualizer",
+        name="central_viz",
+        parameters=[viz_params],
+        output="screen",
+    )
+    
+    # 2. RViz Node
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', rviz_config],
+    )
+
+    # 3. Auto-Play Bag (Delayed by 2.5 seconds to let RViz load)
+    play_bag = TimerAction(
+        period=2.5,
+        actions=[
+            ExecuteProcess(
+                cmd=['ros2', 'bag', 'play', bag_name],
+                output='screen'
+            )
+        ]
+    )
 
     return LaunchDescription([
-        Node(
-            package="task2",
-            executable="central_visualizer",
-            name="central_viz",
-            parameters=[viz_params],
-            output="screen",
-        ),
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            arguments=['-d', rviz_config],
-        )
+        viz_node,
+        rviz_node,
+        play_bag
     ])

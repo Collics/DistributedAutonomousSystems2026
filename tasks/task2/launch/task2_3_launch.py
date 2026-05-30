@@ -3,23 +3,27 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
 import os
-from ament_index_python.packages import get_package_share_directory
 import task2.task_config as cfg
 import numpy as np
 
 def generate_launch_description():
-    rviz_config = os.path.join(
-        get_package_share_directory('task2'),
-        'config.rviz'
-    )
     
-    bag_name = 'task2_3_bag'
+    launch_dir = os.path.dirname(os.path.realpath(__file__))
+    data_dir = os.path.abspath(os.path.join(launch_dir, '..', 'task2', 'data'))
+    os.makedirs(data_dir, exist_ok=True) # Automatically creates the folder if it doesn't exist
+    
+    # Assign the absolute path to the bag
+    bag_name = os.path.join(data_dir, 'task2_3_bag')
 
     node_list = []
     package_name = "task2" 
 
-    # All these variables (NN, obstacles, d_safe) come automatically from scenario_config.py!
-    viz_params = {"NN": cfg.NN, "obstacles": cfg.obstacles, "d_safe": cfg.d_safe, "plot_title": "Real-Time CBF-QP", "save_name": "task2_3_simulation_data.npy"}
+    # All these variables (NN, obstacles, d_safe) come automatically from task_config.py
+    viz_params = {"NN": cfg.NN,
+                  "obstacles": cfg.obstacles,
+                  "d_safe": cfg.d_safe,
+                  "plot_title": "Real-Time CBF-QP",
+                  "save_name": os.path.join(data_dir, "task2_3_simulation_data.npy")}
 
     for ii in range(cfg.NN):
         N_ii = np.nonzero(cfg.Adj[ii])[0].tolist()
@@ -37,8 +41,8 @@ def generate_launch_description():
                     "id": ii,
                     "stepsize": cfg.stepsize,
                     "maxK": cfg.maxK,
-                    "gamma": 1.0, 
-                    "beta": 0.1,   
+                    "gamma": cfg.gamma,  
+                    "beta": cfg.beta,      
                     "neighbors": N_ii,
                     "weights": weights_ii,
                     "self_weight": float(self_weight),
@@ -54,22 +58,23 @@ def generate_launch_description():
 
     # Launch Central Visualizer Node
     node_list.append(
-        Node(package=package_name, executable="central_visualizer", name="central_viz", parameters=[viz_params], output="screen")
+        Node(package=package_name,
+             executable="central_visualizer",
+             name="central_viz",
+             parameters=[viz_params],
+             output="screen")
     )
 
     
-    # 2. Silently delete the old bag folder if it already exists
+    # Delete the old bag folder if it already exists
     if os.path.exists(bag_name):
         print(f"Overwriting old bag: {bag_name}")
         shutil.rmtree(bag_name)
     
     node_list.append(
-        ExecuteProcess(cmd=['ros2', 'bag', 'record', '-a', '-o', bag_name], output='screen')
-    )
-    
-    # Launch RViz
-    node_list.append(
-        Node(package='rviz2', executable='rviz2', name='rviz2', arguments=['-d', rviz_config])
+        ExecuteProcess(cmd=['ros2', 'bag', 'record',
+                            '-a', '-o', bag_name],
+                            output='screen')
     )
 
     return LaunchDescription(node_list)

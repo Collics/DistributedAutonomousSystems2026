@@ -74,10 +74,15 @@ class Agent(Node):
 
         # Setup Decentralized Communication
         for j in self.neighbors:
-            self.create_subscription(MsgFloat, f"/topic_{j:.0f}", self.listener_callback, 10)
+            self.create_subscription(MsgFloat,
+                                     f"/topic_{j:.0f}",
+                                     self.listener_callback,
+                                     1000)
 
         self.received_data = {j: [] for j in self.neighbors}
-        self.publisher = self.create_publisher(MsgFloat, f"/topic_{self.agent_id:.0f}", 10)
+        self.publisher = self.create_publisher(MsgFloat,
+                                               f"/topic_{self.agent_id:.0f}",
+                                               1000)
         self.timer = self.create_timer(0.05, self.timer_callback)
 
     def listener_callback(self, msg):
@@ -138,10 +143,14 @@ class Agent(Node):
 def main(args=None):
     rclpy.init(args=args)
     agent = Agent()
-    sleep(1)
-    rclpy.spin(agent)
-    agent.destroy_node()
-    rclpy.shutdown()
+    sleep(5.0)
+    try:
+        rclpy.spin(agent)
+    except KeyboardInterrupt:
+        pass # Catch the Ctrl+C silently
+    finally:
+        agent.destroy_node() # Now this always runs!
+        rclpy.shutdown()
 
 if __name__ == "__main__":
     main()

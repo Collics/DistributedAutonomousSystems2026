@@ -6,8 +6,13 @@ import networkx as nx
 # 1. CORE PARAMETERS
 # ==========================================
 NN = 6         
-maxK = 1000     
+maxK = 400     
 stepsize = 0.01
+
+# Task 2.2 & 2.3 Mathematical Tuning Parameters
+gamma = 1.0
+beta = 0.1
+
 OBSTACLES = True # Set to False for Task 2.2, True for Task 2.3
 
 # Task 2.3 specific parameters
