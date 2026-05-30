@@ -14,7 +14,7 @@ from graph_utils import get_graph_and_matrix
 from tasks.task2_1_DEF import grad1_li, grad2_li, phi, grad_phi, _compute_metrics
 
 # Import cleanly separated plotting utilities!
-from plots_task2 import (
+from plots import (
     plot_task2_3_trajectories,
     plot_task2_3_metrics,
     plot_task2_3_safety,

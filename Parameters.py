@@ -87,7 +87,7 @@ TASK_1_3_METRICS = True
 ###############
 # TASK 2.1
 ###############
-RUN_TASK_2_1 = True
+RUN_TASK_2_1 = False
 
 TASK_2_1_N        = 6          # Number of robots
 TASK_2_1_ALPHA    = 0.01       # Step size
@@ -101,18 +101,18 @@ TASK_2_1_PARAM_LABELS = [
     "High Cohesion (γ=0.1, λ=2.0)", 
     "Target Drive (γ=5.0, λ=0.1)"
 ]
-TASK_2_1_PARAM = (2.0, 2.0)  # (gamma, lambda) to use for other experiments (geometry tests)
+TASK_2_1_PARAM = (2.0, 2.0)  # Fixed (gamma, lambda) to use for other experiments (geometry tests)
 
 
 # --- EXPERIMENT 2: Geometry Tests ---
 # The shapes to test
 TASK_2_1_SHAPES = ['hexagon', 'triangle', 'line']
-TASK_2_1_SHAPE = 'hexagon'  # Shape to use for other experiments (parameter tuning)
+TASK_2_1_SHAPE = 'hexagon'  # Fixed shape to use for other experiments (parameter tuning)
 
 # --- EXPERIMENT 3: Network Topologies ---
 # The graph types to test
 TASK_2_1_GRAPHS = ['cycle', 'path', 'star']
-TASK_2_1_GRAPH = 'cycle'  # Graph type to use for other experiments (parameter tuning)
+TASK_2_1_GRAPH = 'cycle'  # Fixed graph type to use for other experiments (parameter tuning)
 
 # Animation Flag
 TASK_2_1_ANIMATE = True
@@ -120,7 +120,7 @@ TASK_2_1_ANIMATE = True
 ###############
 # TASK 2.3
 ###############
-RUN_TASK_2_3 = False
+RUN_TASK_2_3 = True
 
 TASK_2_3_N = 6                # Number of agents
 TASK_2_3_MAX_ITER = 500      # Iterations
