@@ -32,7 +32,7 @@ TASK_1_1_PLOT_SUMMARY = True
 ###############
 # TASK 1.2 
 ###############
-TASK_1_2 = True
+TASK_1_2 = False
 
 TASK_1_2_M = 500   # total dataset size
 
@@ -67,7 +67,7 @@ TASK_1_2_METRICS = True
 ###############
 # TASK 1.3
 ###############
-TASK_1_3 = True
+TASK_1_3 = False
 
 TASK_1_3_GROUP_NUMBER = 6          # group number (determines P)
 TASK_1_3_N        = 5          # number of agents
@@ -87,14 +87,35 @@ TASK_1_3_METRICS = True
 ###############
 # TASK 2.1
 ###############
-RUN_TASK_2_1 = False
-TASK_2_1_ANIMATE = True
+RUN_TASK_2_1 = True
 
-TASK_2_1_N        = 6          # number of robots
-TASK_2_1_ALPHA    = 0.01       # step size
-TASK_2_1_MAX_ITER = 1000      # iterations
-TASK_2_1_GRAPH    = "cycle"    # 'cycle' | 'path' | 'star'
-TASK_2_1_ANIMATE  = True       # show animation (can be slow)
+TASK_2_1_N        = 6          # Number of robots
+TASK_2_1_ALPHA    = 0.01       # Step size
+TASK_2_1_MAX_ITER = 1000       # Iterations
+
+# --- EXPERIMENT 1: Parameter Tuning Sets ---
+# List of tuples (gamma, lambda) to test against each other
+TASK_2_1_PARAM_SETS = [(2.0, 2.0), (0.1, 2.0), (5.0, 0.1)]
+TASK_2_1_PARAM_LABELS = [
+    "Balanced (γ=2.0, λ=2.0)", 
+    "High Cohesion (γ=0.1, λ=2.0)", 
+    "Target Drive (γ=5.0, λ=0.1)"
+]
+TASK_2_1_PARAM = (2.0, 2.0)  # (gamma, lambda) to use for other experiments (geometry tests)
+
+
+# --- EXPERIMENT 2: Geometry Tests ---
+# The shapes to test
+TASK_2_1_SHAPES = ['hexagon', 'triangle', 'line']
+TASK_2_1_SHAPE = 'hexagon'  # Shape to use for other experiments (parameter tuning)
+
+# --- EXPERIMENT 3: Network Topologies ---
+# The graph types to test
+TASK_2_1_GRAPHS = ['cycle', 'path', 'star']
+TASK_2_1_GRAPH = 'cycle'  # Graph type to use for other experiments (parameter tuning)
+
+# Animation Flag
+TASK_2_1_ANIMATE = True
 
 ###############
 # TASK 2.3

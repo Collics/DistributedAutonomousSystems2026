@@ -537,16 +537,6 @@ def plot_task_1_3_boundary_comparison(agents_data, phi_fn, wb_true, wb_learned, 
     return fig
 
 
-# ──────────────────────────────────────────────────────────────
-
-#  Task 2.1
-# ──────────────────────────────────────────────────────────────
-
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
-
 # =============================================================================
 # TASK 2.1 – Plot 1: Convergence metrics for a single scenario
 # =============================================================================
@@ -593,15 +583,10 @@ def plot_task2_1_metrics(scenario):
 # TASK 2.1 – Plot 2: 2-D robot trajectories
 # =============================================================================
 
-def plot_task2_1_trajectories(scenario, subsample=5):
+def plot_task2_1_trajectories(scenario, title=None, subsample=5):
     """
     2-D visualisation of robot paths, private targets, barycenter trajectory
     and final optimal positions.
-
-    Parameters
-    ----------
-    scenario  : dict returned by run_task2_1()
-    subsample : plot every k-th step along each trajectory (for performance)
     """
     z_hist    = scenario["z_hist"]      # (K, N, 2)
     r_targets = scenario["r_targets"]   # (N, 2)
@@ -615,10 +600,12 @@ def plot_task2_1_trajectories(scenario, subsample=5):
     colors = [cmap(i / max(N - 1, 1)) for i in range(N)]
 
     fig, ax = plt.subplots(figsize=(8, 8))
-    fig.suptitle(
-        rf"Task 2.1 – Robot Trajectories  |  {lbl}",
-        fontsize=13, fontweight="bold",
-    )
+    
+    # Dynamically set the title based on the experiment loop
+    if title:
+        fig.suptitle(f"{title}\nTrajectory: {lbl}", fontsize=13, fontweight="bold")
+    else:
+        fig.suptitle(rf"Task 2.1 – Robot Trajectories  |  {lbl}", fontsize=13, fontweight="bold")
 
     # ── Barycenter trajectory ─────────────────────────────────────────────
     sigma_hist = z_hist.mean(axis=1)   # (K, 2)
@@ -672,25 +659,19 @@ def plot_task2_1_trajectories(scenario, subsample=5):
 
     plt.show()
 
-
 # =============================================================================
 # TASK 2.1 – Plot 3: Metric comparison across multiple scenarios
 # =============================================================================
 
-def plot_task2_1_comparison(scenarios):
+def plot_task2_1_comparison(scenarios, title="Task 2.1 – Scenario Comparison"):
     """
     Overlays the convergence metrics of multiple scenarios in one figure,
     following the same style as plot_combined_results() in plot_utils.py.
-
-    Parameters
-    ----------
-    scenarios : list of dicts returned by run_task2_1()
     """
     fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 8), sharex=True)
-    fig.suptitle(
-        "Task 2.1 – Scenario Comparison",
-        fontsize=13, fontweight="bold",
-    )
+    
+    # Use the dynamic title passed from main.py
+    fig.suptitle(title, fontsize=14, fontweight="bold")
 
     specs = [
         (axes[0, 0], "cost",        r"Global Cost $J(z, \sigma)$",           False),
@@ -699,22 +680,22 @@ def plot_task2_1_comparison(scenarios):
         (axes[1, 1], "consensus",   r"Consensus Error $\|z - \bar{z}\|$ (Log)", True),
     ]
 
-    for ax, key, title, use_log in specs:
+    for ax, key, metric_title, use_log in specs:
         for sc in scenarios:
             lbl  = sc.get("label", "")
             data = sc["metrics"][key]
             if use_log:
-                ax.semilogy(data, linewidth=2, label=f"Topology: {lbl}")
+                ax.semilogy(data, linewidth=2, label=f"{lbl}")
             else:
-                ax.plot(data,    linewidth=2, label=f"Topology: {lbl}")
-        ax.set_title(title)
+                ax.plot(data,    linewidth=2, label=f"{lbl}")
+        
+        ax.set_title(metric_title)
         ax.set_xlabel("Iteration $k$")
         ax.grid(True, which="both", alpha=0.4)
         ax.legend()
 
     plt.tight_layout(h_pad=2.5)
     plt.show()
-
 
 # =============================================================================
 # TASK 2.1 – Plot 4: Animated 2-D visualisation

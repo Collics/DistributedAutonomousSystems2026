@@ -45,19 +45,23 @@ def main():
         print(" TASK 2.1 – Aggregative Tracking (Multi-Robot)")
         print("=" * 55)
         
-        scenarios = run_task2_1()
+        experiment_groups = run_task2_1()
  
-        for sc in scenarios:
-            plot_task2_1_metrics(sc)
-            plot_task2_1_trajectories(sc)
- 
-        if len(scenarios) > 1:
-            plot_task2_1_comparison(scenarios)
+        for exp_title, scenarios in experiment_groups.items():
+            print(f"\nGenerating plots for: {exp_title.replace(chr(10), ' ')}...")
+            
+            # Pass the descriptive title into your plotting functions
+            for sc in scenarios:
+                # If your trajectory function supports a title argument:
+                plot_task2_1_trajectories(sc, title=exp_title)
+            
+            # Pass the descriptive title into your comparison function
+            plot_task2_1_comparison(scenarios, title=exp_title)
  
         if getattr(par, "TASK_2_1_ANIMATE", False):
-            anim, fig_anim = animate_task2_1(scenarios[0])
- 
-        plt.show()
+            print("\nGenerating animation...")
+            first_scenario = experiment_groups[list(experiment_groups.keys())[0]][0]
+            animate_task2_1(first_scenario)
 
     # ── Task 2.3 ────────────────────────────────────────────
     if getattr(par, "RUN_TASK_2_3", False):
