@@ -149,7 +149,7 @@ class Agent(Node):
 def main(args=None):
     rclpy.init(args=args)
     anAgent = Agent()
-    sleep(5.0)  
+    sleep(60)  
     
     try:
         rclpy.spin(anAgent)

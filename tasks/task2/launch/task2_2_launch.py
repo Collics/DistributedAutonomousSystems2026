@@ -21,7 +21,7 @@ def generate_launch_description():
     
     viz_params = {
         "NN": cfg.NN,
-        "plot_title": "Real-Time Aggregative Tracking (Task 2.2)",
+        "plot_title": f"Task 2.2 | {cfg.scenario_label}",
         "save_name": os.path.join(data_dir, "task2_2_simulation_data.npy")
     }
 
