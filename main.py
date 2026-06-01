@@ -4,15 +4,7 @@ Main
 Authors: Ivan Colangelo, Nicholas Gioia, Alexandru Zaporojanu
 Bologna, 09/06/26
 """
-import matplotlib.pyplot as plt
 import Parameters as par
-
-from plots import (
-    plot_task2_1_metrics,
-    plot_task2_1_trajectories,
-    plot_task2_1_comparison,
-    animate_task2_1,
-)
 
 from tasks.task1_1_DEF import task1_1
 from tasks.task1_2_DEF import task1_2
@@ -47,27 +39,8 @@ def main():
 
     # ── Task 2.1 ────────────────────────────────────────────
     if getattr(par, "RUN_TASK_2_1", False):
-        print("\n" + "=" * 55)
-        print(" TASK 2.1 – Aggregative Tracking (Multi-Robot)")
-        print("=" * 55)
-        
-        experiment_groups = run_task2_1()
- 
-        for exp_title, scenarios in experiment_groups.items():
-            print(f"\nGenerating plots for: {exp_title.replace(chr(10), ' ')}...")
-            
-            # Pass the descriptive title into your plotting functions
-            for sc in scenarios:
-                # If your trajectory function supports a title argument:
-                plot_task2_1_trajectories(sc, title=exp_title)
-            
-            # Pass the descriptive title into your comparison function
-            plot_task2_1_comparison(scenarios, title=exp_title)
- 
-        if getattr(par, "TASK_2_1_ANIMATE", False):
-            print("\nGenerating animation...")
-            first_scenario = experiment_groups[list(experiment_groups.keys())[0]][0]
-            animate_task2_1(first_scenario)
+        # Printing, execution, and saving are all handled inside run_task2_1()
+        run_task2_1()
 
     # ── Task 2.3 ────────────────────────────────────────────
     if getattr(par, "RUN_TASK_2_3", False):

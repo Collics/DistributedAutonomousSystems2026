@@ -91,11 +91,12 @@ TASK_1_3_METRICS = True
 ###############
 # TASK 2.1
 ###############
-RUN_TASK_2_1 = False
+RUN_TASK_2_1 = True
 
 TASK_2_1_N        = 6          # Number of robots
 TASK_2_1_ALPHA    = 0.01       # Step size
 TASK_2_1_MAX_ITER = 1000       # Iterations
+TASK_2_1_EXP_DIR  = "figs/Task2_1_Experiments"  # Output directory for plots and GIFs
 
 # --- EXPERIMENT 1: Parameter Tuning Sets ---
 # List of tuples (gamma, beta) to test against each other
@@ -118,6 +119,12 @@ TASK_2_1_SHAPE = 'hexagon'  # Fixed shape to use for other experiments (paramete
 TASK_2_1_GRAPHS = ['cycle', 'path', 'star']
 TASK_2_1_GRAPH = 'cycle'  # Fixed graph type to use for other experiments (parameter tuning)
 
+# --- Experiment Selection Flags ---
+# Set to True to run that experiment, False to skip it
+TASK_2_1_RUN_EXP1 = True   # Experiment 1: Parameter Tuning
+TASK_2_1_RUN_EXP2 = False   # Experiment 2: Target Geometries
+TASK_2_1_RUN_EXP3 = False   # Experiment 3: Network Topologies
+
 # Animation Flag
 TASK_2_1_ANIMATE = True
 
@@ -125,7 +132,7 @@ TASK_2_1_ANIMATE = True
 ###############
 # TASK 2.3
 ###############
-RUN_TASK_2_3 = True
+RUN_TASK_2_3 = False
 
 TASK_2_3_N = 6                # Number of agents
 TASK_2_3_MAX_ITER = 500       # Iterations

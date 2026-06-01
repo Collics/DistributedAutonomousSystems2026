@@ -5,8 +5,16 @@ Ivan Colangelo, Nicholas Gioia, Alexandru Zaporojanu
 Bologna, 09/06/26
 """
 import numpy as np
+import matplotlib.pyplot as plt
+import os
 import Parameters as par
 from graph_utils import get_graph_and_matrix
+from plots import (
+    plot_task2_1_metrics,
+    plot_task2_1_trajectories,
+    plot_task2_1_comparison,
+    animate_task2_1,
+)
 
 def phi(z_i):
     """Identity mapping for the state."""
@@ -202,58 +210,126 @@ def _run_single_scenario(N, max_iters, stepsize, gamma_val, beta_val, target_sha
     }
 def run_task2_1():
     print("======================================================================")
-    print("--- Starting Task 2.1: Automated Aggregative Tracking Tests ---")
+    print(" STARTING TASK 2.1 AUTOMATED BATCH EXPERIMENTS")
     print("======================================================================")
-    
-    N = getattr(par, 'TASK_2_1_N', 6)
-    max_iters = getattr(par, 'TASK_2_1_MAX_ITER', 15000)
-    stepsize = getattr(par, 'TASK_2_1_ALPHA', 0.01)
 
-    # Start Positions: Randomly in a box (safe from overlapping)
-    np.random.seed(0) 
+    out_dir = getattr(par, 'TASK_2_1_EXP_DIR', 'figs/Task2_1_Experiments')
+    os.makedirs(out_dir, exist_ok=True)
+
+    N         = getattr(par, 'TASK_2_1_N', 6)
+    max_iters = getattr(par, 'TASK_2_1_MAX_ITER', 1000)
+    stepsize  = getattr(par, 'TASK_2_1_ALPHA', 0.01)
+
+    # Lock in a single initial position so all experiments are perfectly comparable
+    np.random.seed(0)
     z_init = generate_safe_initial_positions(N, box_size=5.0, min_dist=0.5, offset_x=-10.0)
 
     opt_gamma, opt_beta = getattr(par, 'TASK_2_1_PARAM', (1.0, 1.0))
     base_shape = 'hexagon'
     base_graph = 'cycle'
 
-    # ---------------------------------------------------------
-    # EXPERIMENT 1: Tuning Parameters
-    # ---------------------------------------------------------
-    print("\n[Experiment 1] Testing Tuning Parameters...")
-    param_sets = getattr(par, 'TASK_2_1_PARAM_SETS', [(1.0, 1.0), (0.1, 2.0), (2.0, 0.1)])
-    param_labels = getattr(par, 'TASK_2_1_PARAM_LABELS', ["Balanced", "Cohesion", "Target Drive"])
-    
-    scenarios_params = []
-    for (g_val, b_val), label in zip(param_sets, param_labels):
-        sc = _run_single_scenario(N, max_iters, stepsize, g_val, b_val, base_shape, base_graph, z_init, label)
-        scenarios_params.append(sc)
+    # Read experiment selection flags
+    run_exp1 = getattr(par, 'TASK_2_1_RUN_EXP1', True)
+    run_exp2 = getattr(par, 'TASK_2_1_RUN_EXP2', True)
+    run_exp3 = getattr(par, 'TASK_2_1_RUN_EXP3', True)
+    do_animate = getattr(par, 'TASK_2_1_ANIMATE', False)
+
+    # ── Helper: save one experiment group ────────────────────────────────
+    def _save_group(scenarios, exp_prefix, exp_title):
+        """Generates, saves and closes all figures for one experiment group."""
+        print(f"\n---> Saving plots for: {exp_prefix.replace('_', ' ')} <---")
+
+        # 1. Per-scenario trajectory + metrics plots
+        for sc in scenarios:
+            lbl = sc['label'].replace(' ', '_').replace('(', '').replace(')', '').replace(',', '')
+            base = os.path.join(out_dir, f"{exp_prefix}_{lbl}")
+
+            fig_traj = plot_task2_1_trajectories(sc, title=exp_title)
+            fig_traj.savefig(f"{base}_trajectory.pdf", bbox_inches='tight')
+            plt.close(fig_traj)
+
+            fig_met = plot_task2_1_metrics(sc)
+            fig_met.savefig(f"{base}_metrics.pdf", bbox_inches='tight')
+            plt.close(fig_met)
+
+        # 2. Multi-scenario comparison plot
+        fig_cmp = plot_task2_1_comparison(scenarios, title=exp_title)
+        fig_cmp.savefig(os.path.join(out_dir, f"{exp_prefix}_comparison.pdf"), bbox_inches='tight')
+        plt.close(fig_cmp)
+
+        # 3. Optional animation (GIF) for the first scenario in the group
+        if do_animate:
+            print(f"  Rendering animation for {exp_prefix}...")
+            anim, fig_anim = animate_task2_1(scenarios[0])
+            fig_anim.suptitle(exp_title, fontsize=13, fontweight='bold')
+            try:
+                anim.save(os.path.join(out_dir, f"{exp_prefix}.gif"), writer='pillow', fps=20)
+                print(f"  [SUCCESS] Animation saved.")
+            except Exception as e:
+                print(f"  [WARNING] Could not save animation: {e}")
+            plt.close(fig_anim)
+
+        print(f"  [SUCCESS] Saved {exp_prefix}")
 
     # ---------------------------------------------------------
-    # EXPERIMENT 2: Target Locations
+    # EXPERIMENT 1: Parameter Tuning
     # ---------------------------------------------------------
-    print("\n[Experiment 2] Testing Target Geometries...")
-    shapes = getattr(par, 'TASK_2_1_SHAPES', ['hexagon', 'triangle', 'line'])
-    
-    scenarios_geom = []
-    for shape in shapes:
-        sc = _run_single_scenario(N, max_iters, stepsize, opt_gamma, opt_beta, shape, base_graph, z_init, shape.capitalize())
-        scenarios_geom.append(sc)
+    if run_exp1:
+        print("\n[Experiment 1] Testing Tuning Parameters...")
+        param_sets   = getattr(par, 'TASK_2_1_PARAM_SETS',   [(1.0, 1.0), (0.1, 2.0), (2.0, 0.1)])
+        param_labels = getattr(par, 'TASK_2_1_PARAM_LABELS', ["Balanced", "Cohesion", "Target Drive"])
+
+        scenarios_params = []
+        for (g_val, b_val), label in zip(param_sets, param_labels):
+            sc = _run_single_scenario(N, max_iters, stepsize, g_val, b_val, base_shape, base_graph, z_init, label)
+            scenarios_params.append(sc)
+
+        _save_group(
+            scenarios_params,
+            "Exp1_Parameter_Tuning",
+            "Experiment 1: Parameter Tuning\n(Fixed: Hexagon Target, Cycle Graph)"
+        )
+    else:
+        print("\n[Experiment 1] Skipped (TASK_2_1_RUN_EXP1 = False)")
+
+    # ---------------------------------------------------------
+    # EXPERIMENT 2: Target Geometries
+    # ---------------------------------------------------------
+    if run_exp2:
+        print("\n[Experiment 2] Testing Target Geometries...")
+        shapes = getattr(par, 'TASK_2_1_SHAPES', ['hexagon', 'triangle', 'line'])
+
+        scenarios_geom = []
+        for shape in shapes:
+            sc = _run_single_scenario(N, max_iters, stepsize, opt_gamma, opt_beta, shape, base_graph, z_init, shape.capitalize())
+            scenarios_geom.append(sc)
+
+        _save_group(
+            scenarios_geom,
+            "Exp2_Target_Geometry",
+            "Experiment 2: Target Geometries\n(Fixed: Balanced Params, Cycle Graph)"
+        )
+    else:
+        print("\n[Experiment 2] Skipped (TASK_2_1_RUN_EXP2 = False)")
 
     # ---------------------------------------------------------
     # EXPERIMENT 3: Network Topologies
     # ---------------------------------------------------------
-    print("\n[Experiment 3] Testing Network Topologies...")
-    graphs = getattr(par, 'TASK_2_1_GRAPHS', ['cycle', 'path', 'star'])
-    
-    scenarios_graphs = []
-    for g in graphs:
-        sc = _run_single_scenario(N, max_iters, stepsize, opt_gamma, opt_beta, base_shape, g, z_init, f"{g.capitalize()} Graph")
-        scenarios_graphs.append(sc)
+    if run_exp3:
+        print("\n[Experiment 3] Testing Network Topologies...")
+        graphs = getattr(par, 'TASK_2_1_GRAPHS', ['cycle', 'path', 'star'])
 
-    # Return grouped dictionaries
-    return {
-        "Experiment 1: Parameter Tuning\n(Fixed: Hexagon Target, Cycle Graph)": scenarios_params,
-        "Experiment 2: Target Geometries\n(Fixed: Balanced Params, Cycle Graph)": scenarios_geom,
-        "Experiment 3: Network Topologies\n(Fixed: Balanced Params, Hexagon Target)": scenarios_graphs
-    }
+        scenarios_graphs = []
+        for g in graphs:
+            sc = _run_single_scenario(N, max_iters, stepsize, opt_gamma, opt_beta, base_shape, g, z_init, f"{g.capitalize()} Graph")
+            scenarios_graphs.append(sc)
+
+        _save_group(
+            scenarios_graphs,
+            "Exp3_Network_Topology",
+            "Experiment 3: Network Topologies\n(Fixed: Balanced Params, Hexagon Target)"
+        )
+    else:
+        print("\n[Experiment 3] Skipped (TASK_2_1_RUN_EXP3 = False)")
+
+    print("\nALL TASK 2.1 EXPERIMENTS COMPLETED SUCCESSFULLY!")

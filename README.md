@@ -2,311 +2,261 @@
 
 **University of Bologna** · M.Sc. in Automation Engineering  
 **Course:** Distributed Autonomous Systems M  
-**Professors:** Giuseppe Notarstefano, Ivano Notarnicola
+**Professors:** Giuseppe Notarstefano, Ivano Notarnicola  
+**Authors:** Ivan Colangelo, Nicholas Gioia, Alexandru Zaporojanu
 
 ---
 
 ## Table of Contents
 
-1. [Project Overview](#project-overview)
-2. [Repository Structure](#repository-structure)
-3. [Task 1 — Distributed Classification via Logistic Regression](#task-1--distributed-classification-via-logistic-regression)
-   - [Task 1.1 — Gradient Tracking](#task-11--gradient-tracking)
-   - [Task 1.2 — Centralized Logistic Regression](#task-12--centralized-logistic-regression)
-   - [Task 1.3 — Distributed Logistic Regression](#task-13--distributed-logistic-regression)
-4. [Task 2 — Multi-Robot Aggregative Tracking](#task-2--multi-robot-aggregative-tracking)
-   - [Task 2.1 — Python Simulation](#task-21--python-simulation)
-   - [Task 2.2 — ROS 2 Implementation](#task-22--ros-2-implementation)
-   - [Task 2.3 — ROS 2 with CBF-QP Safety](#task-23--ros-2-with-cbf-qp-safety)
-5. [How to Run — Task 1](#how-to-run--task-1)
-6. [How to Run — Task 2 (ROS 2)](#how-to-run--task-2-ros-2)
-7. [Configuration Reference](#configuration-reference)
+1. [File Tree](#1-file-tree)
+2. [Python Simulations — Task 1, Task 2.1, Task 2.3](#2-python-simulations--task-1-task-21-task-23)
+3. [ROS 2 Implementation — Task 2.2 and Task 2.3](#3-ros-2-implementation--task-22-and-task-23)
 
 ---
 
-## Project Overview
-- **Task 1** focuses on distributed machine learning: a network of agents cooperatively train a nonlinear binary classifier using Logistic Regression solved via the **Gradient Tracking** algorithm, without any central coordinator.
-- **Task 2** focuses on multi-robot motion coordination: a swarm of robots achieves a target formation using a distributed **Aggregative Tracking** algorithm, first simulated in pure Python and then deployed on real independent processes communicating over **ROS 2**. A **Control Barrier Function (CBF-QP)** safety layer is added to guarantee obstacle avoidance.
-
----
-
-## Repository Structure
+## 1. File Tree
 
 ```
-DistributedAutonomousSystems2026/
+docker_ws/
 │
-├── main.py                  # Entry point for all Task 1 and Task 2.1/2.3 simulations
-├── Parameters.py            # All hyperparameters and flags for Tasks 1 and 2.1
-├── plots.py                 # All plotting functions (trajectories, metrics, animations)
-├── graph_utils.py           # Graph generation utilities (cycle, path, star, ...)
-│
-├── tasks/
-│   ├── task1_1_DEF.py       # Task 1.1 — Gradient Tracking algorithm
-│   ├── task1_2_DEF.py       # Task 1.2 — Centralized Logistic Regression
-│   ├── task1_3_DEF.py       # Task 1.3 — Distributed Logistic Regression
-│   ├── task2_1_DEF.py       # Task 2.1 — Aggregative Tracking (Python simulation)
-│   ├── task2_3_DEF.py       # Task 2.3 — Aggregative Tracking + CBF-QP (Python)
+├── DistributedAutonomousSystems2026/        ← project root (Python simulations)
 │   │
-│   └── task2/               # ROS 2 package (Tasks 2.2 and 2.3)
-│       ├── package.xml
-│       ├── setup.py
-│       ├── launch/
-│       │   ├── task2_2_launch.py      # Launch file for Task 2.2
-│       │   ├── task2_3_launch.py      # Launch file for Task 2.3
-│       │   └── rviz_visual_launch.py  # Launch file for bag-file playback
-│       └── task2/
-│           ├── task_config.py         # Main config file for ROS 2 simulations
-│           ├── task2_2_agent.py       # ROS 2 agent node (Task 2.2)
-│           ├── task2_3_agent.py       # ROS 2 agent node + CBF-QP (Task 2.3)
-│           ├── centralized_visualizer.py  # Passive observer + Matplotlib + RViz bridge
-│           └── data/                  # Auto-generated output directory
-│               ├── task2_2_simulation_data.npy
-│               ├── task2_2_simulation_data.png
-│               ├── task2_3_simulation_data.npy
-│               ├── task2_3_simulation_data.png
-│               ├── task2_2_bag/       # Recorded ROS 2 bag (Task 2.2)
-│               └── task2_3_bag/       # Recorded ROS 2 bag (Task 2.3)
+│   ├── main.py                              # Entry point — runs all Python tasks
+│   ├── Parameters.py                        # All flags and hyperparameters for Tasks 1, 2.1, 2.3
+│   ├── plots.py                             # All plotting functions (shared by Python tasks)
+│   ├── graph_utils.py                       # Graph generation (cycle, path, star, complete, random)
+│   │
+│   ├── tasks/
+│   │   ├── task1_1_DEF.py                   # Task 1.1 — Gradient Tracking (quadratic cost)
+│   │   ├── task1_2_DEF.py                   # Task 1.2 — Centralized Logistic Regression
+│   │   ├── task1_3_DEF.py                   # Task 1.3 — Distributed Logistic Regression
+│   │   ├── task2_1_DEF.py                   # Task 2.1 — Aggregative Tracking (pure Python)
+│   │   ├── task2_3_DEF.py                   # Task 2.3 — Aggregative Tracking + CBF-QP (pure Python)
+│   │   │
+│   │   └── task2/                           ← ROS 2 package (Tasks 2.2 and 2.3)
+│   │       ├── package.xml
+│   │       ├── setup.py
+│   │       ├── setup.cfg
+│   │       ├── config.rviz                  # RViz2 display configuration
+│   │       │
+│   │       ├── launch/
+│   │       │   ├── task2_2_launch.py        # Launches all agents + visualizer for Task 2.2
+│   │       │   ├── task2_3_launch.py        # Launches all agents + visualizer for Task 2.3
+│   │       │   └── rviz_visual_launch.py    # Bag-file playback visualizer
+│   │       │
+│   │       └── task2/
+│   │           ├── task_config.py           # ★ Main config — select experiment & scenario here
+│   │           ├── task2_2_agent.py         # ROS 2 agent node (no obstacles)
+│   │           ├── task2_3_agent.py         # ROS 2 agent node + CBF-QP safety filter
+│   │           ├── centralized_visualizer.py # Passive observer: real-time plot + auto-saves results
+│   │           └── data/                    # Auto-generated output directory
+│   │               ├── task2_2_simulation_data.npy
+│   │               ├── task2_2_simulation_data.png
+│   │               ├── task2_2_simulation_data.gif
+│   │               ├── task2_3_simulation_data.npy
+│   │               ├── task2_3_simulation_data.png
+│   │               ├── task2_3_simulation_data.gif
+│   │               ├── task2_2_bag/         # ROS 2 bag recording (Task 2.2)
+│   │               └── task2_3_bag/         # ROS 2 bag recording (Task 2.3)
+│   │
+│   └── figs/
 ```
 
-> **Note:** The folders `build/`, `install/`, and `log/` at the workspace root are auto-generated by `colcon build` and should be ignored. They are listed in `.gitignore`.
+> **Note:** `build/`, `install/`, and `log/` are auto-generated by `colcon build`. They are listed in `.gitignore` and should never be committed.
 
 ---
 
-## Task 1 — Distributed Classification via Logistic Regression
+## 2. Python Simulations — Task 1, Task 2.1, Task 2.3
 
-### Task 1.1 — Gradient Tracking
+All pure-Python simulations are controlled from a single entry point: `main.py`.  
+Configuration is done entirely via `Parameters.py` — **you never need to touch the task files**.
 
-**File:** `tasks/task1_1_DEF.py`
+### 2.1 — Enable the tasks you want to run
 
-Implements the **Gradient Tracking** algorithm to solve a distributed consensus optimization problem:
+Open `Parameters.py` and set the desired flags to `True`:
 
-$$\min_{z} \sum_{i=1}^{N} \ell_i(z), \quad \ell_i(z) = \frac{1}{2} z^\top Q_i z + r_i^\top z$$
-
-Each agent $i$ holds a private quadratic cost and communicates only with neighbors. The algorithm is tested on `cycle`, `path`, `star`, `complete`, and `random` graph topologies.
-
-**Key parameters in `Parameters.py`:**
-| Parameter | Default | Description |
-|---|---|---|
-| `TASK_1_1` | `False` | Enable/disable this task |
-| `TASK_1_1_N` | `5` | Number of agents |
-| `TASK_1_1_STEPSIZE` | `1e-2` | Gradient step size |
-| `TASK_1_1_MAX_ITER` | `1000` | Number of iterations |
-
----
-
-### Task 1.2 — Centralized Logistic Regression
-
-**File:** `tasks/task1_2_DEF.py`
-
-Trains a nonlinear binary classifier using **Gradient Descent on the full dataset**. Two nonlinear feature mappings are supported:
-- **Parabola:** $\varphi(x) = [x_1,\ x_2,\ x_1^2]^\top$
-- **Hyperbola:** $\varphi(x) = [x_1,\ x_2,\ x_1 x_2]^\top$
-
-**Key parameters in `Parameters.py`:**
-| Parameter | Default | Description |
-|---|---|---|
-| `TASK_1_2` | `False` | Enable/disable this task |
-| `TASK_1_2_M` | `500` | Total dataset size |
-| `TASK_1_2_STEPSIZE` | `5e-4` | Gradient step size |
-
----
-
-### Task 1.3 — Distributed Logistic Regression
-
-**File:** `tasks/task1_3_DEF.py`
-
-Each of the $N$ agents holds a private local dataset (a subset of the full dataset) and cooperatively trains the classifier using Gradient Tracking — **no agent ever sees the full dataset**.
-
-The dataset is split using a **Vertical Feature-Biased Split** (ordered by $x_2$): the number of local points is $P = 40 + (G \bmod 3) \times 10$, where $G$ is the group number.
-
-**Key parameters in `Parameters.py`:**
-| Parameter | Default | Description |
-|---|---|---|
-| `TASK_1_3` | `False` | Enable/disable this task |
-| `TASK_1_3_GROUP_NUMBER` | `6` | Your group number (determines split size P) |
-| `TASK_1_3_N` | `5` | Number of agents |
-| `TASK_1_3_M_LIST` | `[500, 1500]` | Dataset sizes to test |
-
----
-
-## Task 2 — Multi-Robot Aggregative Tracking
-
-The agents cooperatively minimize the global cost:
-
-$$J(z,\sigma) = \sum_{i=1}^{N} \ell_i(z_i, \sigma), \quad \ell_i(z_i, \sigma) = \gamma_i \|z_i - r_i\|^2 + \beta_i \|z_i - \sigma\|^2$$
-
-where $\sigma = \frac{1}{N}\sum_j z_j$ is the **barycenter** of all positions and $r_i$ is agent $i$'s private target.
-
----
-
-### Task 2.1 — Python Simulation
-
-**File:** `tasks/task2_1_DEF.py`
-
-Full distributed simulation in a single Python process (for loop over agents). Tests three experiment sets, each varying one dimension while keeping others fixed:
-
-| Experiment | What varies | Fixed values |
-|---|---|---|
-| 1 — Parameter Tuning | $(\gamma, \beta)$ | Hexagon target, Cycle graph |
-| 2 — Target Geometry | Shape (hexagon / triangle / line) | $(\gamma, \beta)=(2.0, 2.0)$, Cycle graph |
-| 3 — Network Topology | Graph (cycle / path / star) | $(\gamma, \beta)=(2.0, 2.0)$, Hexagon target |
-
-**Key parameters in `Parameters.py`:**
-| Parameter | Default | Description |
-|---|---|---|
-| `RUN_TASK_2_1` | `True` | Enable/disable this task |
-| `TASK_2_1_N` | `6` | Number of robots |
-| `TASK_2_1_ALPHA` | `0.01` | Step size |
-| `TASK_2_1_MAX_ITER` | `1000` | Number of iterations |
-| `TASK_2_1_ANIMATE` | `True` | Generate animation |
-
----
-
-### Task 2.2 — ROS 2 Implementation
-
-Replicates the same three experiments as Task 2.1, but each robot runs as an **independent OS process** and communicates only with graph-neighbors via ROS 2 topics (`/topic_i`). No agent ever accesses a shared variable — the collective behavior emerges purely from local peer-to-peer interactions.
-
-**Architecture:**
-- `task2_2_agent.py` — One instance per robot. Reads its own parameters from the ROS 2 parameter server (neighbors, weights, $\gamma_i$, $\beta_i$, $r_i$, $z_i^0$). Driven by a timer at 50 ms.
-- `centralized_visualizer.py` — Passive observer. Subscribes to all topics for visualization only. Does **not** participate in the algorithm.
-
-**Selecting the experiment** — Edit `tasks/task2/task2/task_config.py`:
 ```python
-EXPERIMENT   = 1   # 1=Parameter Tuning | 2=Target Geometry | 3=Network Topology
-SCENARIO_IDX = 0   # Index within the experiment (0, 1, or 2)
+# ── Task 1 ──────────────────────────────────────────────────────────────────
+TASK_1_1 = False    # Gradient Tracking on quadratic costs
+TASK_1_2 = False    # Centralized Logistic Regression
+TASK_1_3 = False    # Distributed Logistic Regression (Gradient Tracking)
+
+# ── Task 2 (Python) ─────────────────────────────────────────────────────────
+RUN_TASK_2_1 = False  # Aggregative Tracking — pure Python simulation
+RUN_TASK_2_3 = False  # Aggregative Tracking + CBF-QP safety — pure Python
 ```
 
-| `EXPERIMENT` | `SCENARIO_IDX` | Scenario |
-|---|---|---|
-| `1` | `0` | Balanced (γ=2.0, β=2.0) |
-| `1` | `1` | High Cohesion (γ=0.1, β=2.0) |
-| `1` | `2` | Target Drive (γ=5.0, β=0.1) |
-| `2` | `0` | Hexagon target |
-| `2` | `1` | Triangle target |
-| `2` | `2` | Line target |
-| `3` | `0` | Cycle graph |
-| `3` | `1` | Path graph |
-| `3` | `2` | Star graph |
+### 2.2 — (Optional) Select which Task 2.1 experiments to run
 
----
-
-### Task 2.3 — ROS 2 with CBF-QP Safety
-
-Extends Task 2.2 by adding a **Control Barrier Function (CBF-QP)** safety filter that guarantees obstacle avoidance at each iteration. For each obstacle $o$ at position $p_o$, the barrier function is:
-
-$$V_{i,o}(z_i) = \|z_i - p_o\|^2 - d_{\text{safe}}^2$$
-
-At each step, the nominal control $u^{\text{nom}}_i$ (from Aggregative Tracking) is projected onto the safe set by solving:
-
-$$u^*_i = \arg\min_u \|u - u^{\text{nom}}_i\|^2 \quad \text{s.t.} \quad -\nabla V_{i,o}^\top u \leq \gamma_{\text{cbf}} V_{i,o} \quad \forall o$$
-
-**Key parameters in `tasks/task2/task2/task_config.py`:**
-| Parameter | Default | Description |
-|---|---|---|
-| `OBSTACLES` | `False` | `True` for Task 2.3, `False` for Task 2.2 |
-| `d_safe` | `1.0` | Safety radius around each obstacle |
-| `gamma_cbf` | `0.5` | CBF decay rate |
-| `obstacles` | `[0.0, 2.0, 2.0, -2.0]` | Obstacle center coordinates (flat list) |
-
----
-
-## How to Run — Task 1
-
-All Task 1 and Task 2.1 simulations are run from the project root via `main.py`.
-
-**1. Enable the desired task** in `Parameters.py`:
 ```python
-TASK_1_1 = True    # Gradient Tracking
-TASK_1_2 = True    # Centralized Logistic Regression
-TASK_1_3 = True    # Distributed Logistic Regression
-RUN_TASK_2_1 = True  # Aggregative Tracking (Python)
-RUN_TASK_2_3 = True # CBF-QF Safety
+# Each flag independently enables/disables one experiment
+TASK_2_1_RUN_EXP1 = True   # Experiment 1 — Parameter Tuning  (γ, β)
+TASK_2_1_RUN_EXP2 = True   # Experiment 2 — Target Geometry   (hexagon / triangle / line)
+TASK_2_1_RUN_EXP3 = True   # Experiment 3 — Network Topology  (cycle / path / star)
+
+TASK_2_1_ANIMATE  = True   # Generate a GIF animation for each experiment
+TASK_2_1_EXP_DIR  = "figs/Task2_1_Experiments"   # Output directory for PDFs and GIFs
 ```
 
-**2. Run from the project root:**
+### 2.3 — Run
+
+From the project root (`DistributedAutonomousSystems2026/`):
+
 ```bash
 python main.py
 ```
 
-Plots and animations are displayed interactively via Matplotlib.
+**What happens:** For each enabled task, results are computed, all figures are saved automatically to the configured output directory, and the process exits cleanly — **no interactive window blocks execution**.
+
+| Task | Output |
+|---|---|
+| Task 1.1 | Displayed via `plt.show()` (interactive) |
+| Task 1.2 | Displayed via `plt.show()` (interactive) |
+| Task 1.3 | Displayed via `plt.show()` (interactive) |
+| Task 2.1 | PDFs + optional GIFs saved to `figs/Task2_1_Experiments/` |
+| Task 2.3 | PDFs + optional GIFs saved to `figs/Task2_3_Experiments/` |
+
+### 2.4 — Key parameters reference
+
+#### Task 1.1 — Gradient Tracking
+| Parameter | Default | Description |
+|---|---|---|
+| `TASK_1_1_N` | `5` | Number of agents |
+| `TASK_1_1_STEPSIZE` | `1e-2` | Gradient step size |
+| `TASK_1_1_MAX_ITER` | `1000` | Number of iterations |
+| `GRAPH_TYPES` | `['star','cycle','path','complete','random']` | Topologies to test |
+
+#### Task 1.2 — Centralized Logistic Regression
+| Parameter | Default | Description |
+|---|---|---|
+| `TASK_1_2_M` | `500` | Total dataset size |
+| `TASK_1_2_STEPSIZE` | `5e-4` | Gradient step size |
+| `TASK_1_2_RANDOM_MAPPING` | `False` | Randomise classifier weights |
+
+#### Task 1.3 — Distributed Logistic Regression
+| Parameter | Default | Description |
+|---|---|---|
+| `TASK_1_3_GROUP_NUMBER` | `6` | Group number (determines local dataset size P) |
+| `TASK_1_3_N` | `5` | Number of agents |
+| `TASK_1_3_M_LIST` | `[500, 1500]` | Dataset sizes to test |
+
+#### Task 2.1 — Aggregative Tracking (Python)
+| Parameter | Default | Description |
+|---|---|---|
+| `TASK_2_1_N` | `6` | Number of robots |
+| `TASK_2_1_ALPHA` | `0.01` | Step size |
+| `TASK_2_1_MAX_ITER` | `1000` | Number of iterations |
+| `TASK_2_1_PARAM` | `(2.0, 2.0)` | Fixed (γ, β) used for Exp. 2 and 3 |
+| `TASK_2_1_PARAM_SETS` | `[(2.0,2.0),(0.1,2.0),(5.0,0.1)]` | (γ, β) pairs for Exp. 1 |
+| `TASK_2_1_SHAPES` | `['hexagon','triangle','line']` | Shapes for Exp. 2 |
+| `TASK_2_1_GRAPHS` | `['cycle','path','star']` | Topologies for Exp. 3 |
+
+#### Task 2.3 — Aggregative Tracking + CBF-QP (Python)
+| Parameter | Default | Description |
+|---|---|---|
+| `TASK_2_3_N` | `6` | Number of agents |
+| `TASK_2_3_ALPHA` | `0.01` | Step size |
+| `TASK_2_3_MAX_ITER` | `500` | Number of iterations |
+| `TASK_2_3_D_SAFE` | `1.0` | Safety radius around obstacles |
+| `TASK_2_3_PARAM` | `(2.0, 0.1)` | Fixed (γ, β) tracking params |
+| `TASK_2_3_GCBF` | `1.0` | Fixed CBF parameter for Exp. 2 and 3 |
+| `TASK_2_3_EXP1_GCBF` | `[0.1, 1.0, 4.0]` | γ_cbf values for Exp. 1 |
 
 ---
 
-## How to Run — Task 2 (ROS 2)
+## 3. ROS 2 Implementation — Task 2.2 and Task 2.3
 
-> All ROS 2 commands must be run **inside the Docker container**.
+> **All ROS 2 commands must be run inside the Docker container.**  
+> Each robot runs as a **separate OS process** and communicates with its neighbours exclusively via ROS 2 topics (`/agent_i/topic_i`). There is no shared memory.
 
-### Prerequisites
+ 
+### 3.0 Step 1: Configure the experiment
 
-```bash
-# Source the ROS 2 workspace (run once per terminal session)
-source install/setup.bash
+**Edit `tasks/task2/task2/task_config.py`** and set the two lines at the top of section 2:
+
+```python
+# ==========================================
+# 2. EXPERIMENT SELECTION
+# ==========================================
+TASK_MODE    = '2.2'   # '2.2' for Task 2.2 (no obstacles)
+                        # '2.3' for Task 2.3 (with CBF-QP safety)
+
+EXPERIMENT   = 1        # 1 = Parameter Tuning
+                        # 2 = Target Geometry
+                        # 3 = Network Topology
+
+SCENARIO_IDX = 0        # Index within the chosen experiment (0, 1, or 2)
 ```
 
-### Task 2.2 — Aggregative Tracking
+**Full scenario table:**
 
-**1.** Set `TASK_MODE=2.3` in `tasks/task2/task2/task_config.py`.
+| `TASK_MODE` | `EXPERIMENT` | `SCENARIO_IDX` | What runs |
+|---|---|---|---|
+| `'2.2'` | `1` | `0` | Balanced (γ=2.0, β=2.0) |
+| `'2.2'` | `1` | `1` | High Cohesion (γ=0.1, β=2.0) |
+| `'2.2'` | `1` | `2` | Target Drive (γ=5.0, β=0.1) |
+| `'2.2'` | `2` | `0` | Hexagon target formation |
+| `'2.2'` | `2` | `1` | Triangle target formation |
+| `'2.2'` | `2` | `2` | Line target formation |
+| `'2.2'` | `3` | `0` | Cycle graph topology |
+| `'2.2'` | `3` | `1` | Path graph topology |
+| `'2.2'` | `3` | `2` | Star graph topology |
+| `'2.3'` | `1` | `0` | Conservative CBF (γ_cbf=0.1) |
+| `'2.3'` | `1` | `1` | Balanced CBF (γ_cbf=0.5) |
+| `'2.3'` | `1` | `2` | Aggressive CBF (γ_cbf=2.0) |
+| `'2.3'` | `2` | `0` | Standard obstacle layout |
+| `'2.3'` | `2` | `1` | Center-block obstacle |
+| `'2.3'` | `2` | `2` | Wall obstacle layout |
+| `'2.3'` | `3` | `0` | Cycle graph + obstacles |
+| `'2.3'` | `3` | `1` | Path graph + obstacles |
+| `'2.3'` | `3` | `2` | Star graph + obstacles |
 
-**2.** (If you changed Python files, rebuild):
-```bash
-colcon build --symlink-install
-source install/setup.bash
+You can also tune the simulation basics in the same file:
+
+```python
+NN       = 6      # Number of robots
+maxK     = 400    # Total iterations to run
+stepsize = 0.01   # Gradient step size
 ```
 
-**3.** Launch the simulation:
+### 3.1 — Step 6: Run the simulation
+
+#### For Task 2.2 (no obstacles):
+
 ```bash
 ros2 launch task2 task2_2_launch.py
 ```
 
-The simulation runs for `maxK` iterations, then auto-generates convergence plots and saves them to `tasks/task2/task2/data/`.
+#### For Task 2.3 (with CBF-QP obstacle avoidance):
 
-### Task 2.3 — Aggregative Tracking + CBF-QP Safety
-
-**1.** Set `TASK_MODE=2.3` in `tasks/task2/task2/task_config.py`.
-
-**2.** Launch:
 ```bash
 ros2 launch task2 task2_3_launch.py
 ```
 
-### Bag Playback (Post-Simulation Visualization)
+**What happens automatically:**
+1. `N` agent processes start, each subscribing to its neighbours' topics and publishing its own.
+2. A `central_visualizer` node starts and shows a real-time Matplotlib window of all robot positions.
+3. A `ros2 bag record` process records every topic to disk.
+4. After `maxK` iterations the visualizer auto-saves results and terminates the whole launch.
 
-To replay a recorded simulation:
+**Output files** (saved to `tasks/task2/task2/data/`):
+- `task2_2_simulation_data.npy` — raw history array
+- `task2_2_simulation_data.png` — convergence dashboard (trajectories + metrics)
+- `task2_2_simulation_data.gif` — trajectory animation
+- `task2_2_bag/` — full ROS 2 bag recording
 
-**Terminal 1** — Launch the visualization stack:
+> You can also stop the simulation early with `Ctrl+C`. The visualizer will catch the interrupt and still generate all output files.
+
+
+
+### 3.2 —  Rviz and bag player
+
+You can replay any past simulation without re-running the agents.
+
+Start the visualizer in playback mode:
 ```bash
 ros2 launch task2 rviz_visual_launch.py
 ```
 
-**Terminal 2** — Play back the bag:
-```bash
-ros2 bag play tasks/task2/task2/data/task2_2_bag
-# or
-ros2 bag play tasks/task2/task2/data/task2_3_bag
-```
 
----
-
-## Configuration Reference
-
-### `Parameters.py` — Tasks 1 and 2.1
-Central configuration file for all pure-Python simulations. Toggle tasks on/off by setting `TASK_1_1`, `TASK_1_2`, `TASK_1_3`, `RUN_TASK_2_1` to `True` or `False`.
-
-### `tasks/task2/task2/task_config.py` — Tasks 2.2 and 2.3
-Central configuration file for all ROS 2 simulations. The most important flags:
-
-```python
-# ---- Select which ROS 2 task to run ----
-TASK_MODE    = '2.2' or '2.3'
-
-# ---- Select which experiment to run (task2_2) ----
-EXPERIMENT   = 1       # 1=Params | 2=Geometry | 3=Topology
-SCENARIO_IDX = 0       # 0, 1, or 2
-# ---- Select which experiment to run (task2_3) ----
-EXPERIMENT   = 1       # 1=Params | 2=Geometry | 3=Topology
-SCENARIO_IDX = 0       # 0, 1, or 2
-# ---- Simulation parameters ----
-NN       = 6           # Number of robots
-maxK     = 400         # Number of iterations
-stepsize = 0.01        # Gradient step size
-```

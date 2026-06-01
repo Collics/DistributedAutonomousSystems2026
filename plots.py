@@ -577,7 +577,7 @@ def plot_task2_1_metrics(scenario):
         ax.grid(True, which="both", alpha=0.4)
 
     plt.tight_layout(h_pad=2.5)
-    plt.show()
+    return fig
 
 
 # =============================================================================
@@ -658,7 +658,7 @@ def plot_task2_1_trajectories(scenario, title=None, subsample=5):
     fig.subplots_adjust(right=0.75)
     ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), fontsize=9)
 
-    plt.show()
+    return fig
 
 # =============================================================================
 # TASK 2.1 – Plot 3: Metric comparison across multiple scenarios
@@ -696,7 +696,7 @@ def plot_task2_1_comparison(scenarios, title="Task 2.1 – Scenario Comparison")
         ax.legend()
 
     plt.tight_layout(h_pad=2.5)
-    plt.show()
+    return fig
 
 # =============================================================================
 # TASK 2.1 – Plot 4: Animated 2-D visualisation
@@ -805,7 +805,6 @@ def animate_task2_1(scenario, skip_frames=5, save_mp4=False):
         except Exception as e:
             print(f"Error saving animation (ffmpeg might be missing): {e}")
 
-    plt.show()
     return anim, fig
     
 def plot_task2_3_animation(nominal, safe, step=5, interval=60, title=None):
