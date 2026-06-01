@@ -125,7 +125,7 @@ The dataset is split using a **Vertical Feature-Biased Split** (ordered by $x_2$
 | `TASK_1_3` | `False` | Enable/disable this task |
 | `TASK_1_3_GROUP_NUMBER` | `6` | Your group number (determines split size P) |
 | `TASK_1_3_N` | `5` | Number of agents |
-| `TASK_1_3_M_LIST` | `[500, 1000]` | Dataset sizes to test |
+| `TASK_1_3_M_LIST` | `[500, 1500]` | Dataset sizes to test |
 
 ---
 
