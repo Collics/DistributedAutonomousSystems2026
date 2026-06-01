@@ -204,34 +204,48 @@ def run_task_2_3():
     print(" STARTING TASK 2.3 AUTOMATED BATCH EXPERIMENTS")
     print("======================================================================")
 
+    # Read experiment selection flags
+    run_exp1 = getattr(par, 'TASK_2_3_RUN_EXP1', True)
+    run_exp2 = getattr(par, 'TASK_2_3_RUN_EXP2', True)
+    run_exp3 = getattr(par, 'TASK_2_3_RUN_EXP3', True)
+
     # ---------------------------------------------------------
     # EXPERIMENT 1: CBF Parameter Tuning
     # ---------------------------------------------------------
-    print("\n[Experiment 1] Testing CBF Parameter Tuning...")
-    exp1_gcbfs  = getattr(par, 'TASK_2_3_EXP1_GCBF', [0.1, 0.5, 2.0])
-    exp1_labels = getattr(par, 'TASK_2_3_EXP1_LABELS', ["Conservative", "Balanced", "Aggressive"])
-    for gcbf, label in zip(exp1_gcbfs, exp1_labels):
-        _run_single_scenario(base_gamma, base_beta, gcbf, base_obstacles, base_graph, label, "Exp1_Parameter_Tuning")
+    if run_exp1:
+        print("\n[Experiment 1] Testing CBF Parameter Tuning...")
+        exp1_gcbfs  = getattr(par, 'TASK_2_3_EXP1_GCBF', [0.1, 0.5, 2.0])
+        exp1_labels = getattr(par, 'TASK_2_3_EXP1_LABELS', ["Conservative", "Balanced", "Aggressive"])
+        for gcbf, label in zip(exp1_gcbfs, exp1_labels):
+            _run_single_scenario(base_gamma, base_beta, gcbf, base_obstacles, base_graph, label, "Exp1_Parameter_Tuning")
+    else:
+        print("\n[Experiment 1] Skipped (TASK_2_3_RUN_EXP1 = False)")
 
     # ---------------------------------------------------------
     # EXPERIMENT 2: Obstacle Geometries
     # ---------------------------------------------------------
-    print("\n[Experiment 2] Testing Obstacle Geometries...")
-    exp2_obs    = getattr(par, 'TASK_2_3_EXP2_OBSTACLES', [])
-    exp2_labels = getattr(par, 'TASK_2_3_EXP2_LABELS', [])
-    for obs, label in zip(exp2_obs, exp2_labels):
-        _run_single_scenario(base_gamma, base_beta, base_gcbf, obs, base_graph, label, "Exp2_Obstacle_Geometry")
+    if run_exp2:
+        print("\n[Experiment 2] Testing Obstacle Geometries...")
+        exp2_obs    = getattr(par, 'TASK_2_3_EXP2_OBSTACLES', [])
+        exp2_labels = getattr(par, 'TASK_2_3_EXP2_LABELS', [])
+        for obs, label in zip(exp2_obs, exp2_labels):
+            _run_single_scenario(base_gamma, base_beta, base_gcbf, obs, base_graph, label, "Exp2_Obstacle_Geometry")
+    else:
+        print("\n[Experiment 2] Skipped (TASK_2_3_RUN_EXP2 = False)")
 
     # ---------------------------------------------------------
     # EXPERIMENT 3: Network Topologies
     # ---------------------------------------------------------
-    print("\n[Experiment 3] Testing Network Topologies...")
-    exp3_graphs = getattr(par, 'TASK_2_3_EXP3_GRAPHS', ['cycle', 'path', 'star'])
-    exp3_labels = getattr(par, 'TASK_2_3_EXP3_LABELS', ["Cycle", "Path", "Star"])
-    for g, label in zip(exp3_graphs, exp3_labels):
-        _run_single_scenario(base_gamma, base_beta, base_gcbf, base_obstacles, g, label, "Exp3_Network_Topology")
+    if run_exp3:
+        print("\n[Experiment 3] Testing Network Topologies...")
+        exp3_graphs = getattr(par, 'TASK_2_3_EXP3_GRAPHS', ['cycle', 'path', 'star'])
+        exp3_labels = getattr(par, 'TASK_2_3_EXP3_LABELS', ["Cycle", "Path", "Star"])
+        for g, label in zip(exp3_graphs, exp3_labels):
+            _run_single_scenario(base_gamma, base_beta, base_gcbf, base_obstacles, g, label, "Exp3_Network_Topology")
+    else:
+        print("\n[Experiment 3] Skipped (TASK_2_3_RUN_EXP3 = False)")
 
-    print("\nALL 9 SAFETY EXPERIMENTS COMPLETED SUCCESSFULLY!")
+    print("\nALL TASK 2.3 EXPERIMENTS COMPLETED SUCCESSFULLY!")
 
 if __name__ == "__main__":
     run_task_2_3()
