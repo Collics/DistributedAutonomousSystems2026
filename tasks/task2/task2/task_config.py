@@ -1,5 +1,6 @@
 # src/task2/task2/scenario_config.py
 import numpy as np
+
 import networkx as nx
 # ==========================================
 # 1. CORE PARAMETERS

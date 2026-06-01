@@ -1,4 +1,8 @@
-
+"""
+Parameters 
+Ivan Colangelo, Nicholas Gioia, Alexandru Zaporojanu
+Bologna, 09/06/26
+"""
 import numpy as np
 
 ###############

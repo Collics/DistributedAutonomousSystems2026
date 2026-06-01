@@ -1,6 +1,8 @@
 """
-Distributed Autonomous Systems - Final Project
+Distributed Autonomous Systems 
 Task 2.3: Multi-Robot Safety Controllers using CBF-QP
+Authors: Ivan Colangelo, Nicholas Gioia, Alexandru Zaporojanu
+Bologna, 09/06/26
 """
 
 import numpy as np

@@ -1,5 +1,8 @@
 """
+
 Task 2.1: Distributed Aggregative Tracking
+Ivan Colangelo, Nicholas Gioia, Alexandru Zaporojanu
+Bologna, 09/06/26
 """
 import numpy as np
 import Parameters as par

@@ -1,3 +1,9 @@
+"""
+Distributed Autonomous Systems
+Main
+Authors: Ivan Colangelo, Nicholas Gioia, Alexandru Zaporojanu
+Bologna, 09/06/26
+"""
 import matplotlib.pyplot as plt
 import Parameters as par
 
