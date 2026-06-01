@@ -245,7 +245,7 @@ source install/setup.bash
 
 ### Task 2.2 — Aggregative Tracking
 
-**1.** Configure the experiment in `tasks/task2/task2/task_config.py` (set `OBSTACLES = False`).
+**1.** Set `TASK_MODE=2.3` in `tasks/task2/task2/task_config.py`.
 
 **2.** (If you changed Python files, rebuild):
 ```bash
@@ -262,7 +262,7 @@ The simulation runs for `maxK` iterations, then auto-generates convergence plots
 
 ### Task 2.3 — Aggregative Tracking + CBF-QP Safety
 
-**1.** Set `OBSTACLES = True` in `tasks/task2/task2/task_config.py`.
+**1.** Set `TASK_MODE=2.3` in `tasks/task2/task2/task_config.py`.
 
 **2.** Launch:
 ```bash
@@ -285,8 +285,6 @@ ros2 bag play tasks/task2/task2/data/task2_2_bag
 ros2 bag play tasks/task2/task2/data/task2_3_bag
 ```
 
->  Make sure `OBSTACLES` in `task_config.py` matches the task you are replaying (`False` for Task 2.2, `True` for Task 2.3).
-
 ---
 
 ## Configuration Reference
@@ -299,12 +297,14 @@ Central configuration file for all ROS 2 simulations. The most important flags:
 
 ```python
 # ---- Select which ROS 2 task to run ----
-OBSTACLES = False      # False → Task 2.2 | True → Task 2.3
+TASK_MODE    = '2.2' or '2.3'
 
-# ---- Select which experiment to run (Task 2.2 only) ----
+# ---- Select which experiment to run (task2_2) ----
 EXPERIMENT   = 1       # 1=Params | 2=Geometry | 3=Topology
 SCENARIO_IDX = 0       # 0, 1, or 2
-
+# ---- Select which experiment to run (task2_3) ----
+EXPERIMENT   = 1       # 1=Params | 2=Geometry | 3=Topology
+SCENARIO_IDX = 0       # 0, 1, or 2
 # ---- Simulation parameters ----
 NN       = 6           # Number of robots
 maxK     = 400         # Number of iterations
