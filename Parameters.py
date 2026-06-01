@@ -71,7 +71,7 @@ TASK_1_3 = False
 
 TASK_1_3_GROUP_NUMBER = 6          # group number (determines P)
 TASK_1_3_N        = 5          # number of agents
-TASK_1_3_M_LIST   = [500, 1000]   # dataset sizes to test
+TASK_1_3_M_LIST   = [500, 1500]   # dataset sizes to test
 TASK_1_3_STEPSIZE = 0.005
 TASK_1_3_MAX_ITER = 1000
 TASK_1_3_RANGE     = (-2, 2)   # range for generating data
