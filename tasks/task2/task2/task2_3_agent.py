@@ -6,43 +6,50 @@ from time import sleep
 from scipy.optimize import minimize, LinearConstraint
 
 def local_cost(zi, sigma, r_i, gamma_i, beta_i):
+    """Local cost function for agent i."""
     return gamma_i * np.dot(zi - r_i, zi - r_i) + beta_i * np.dot(zi - sigma, zi - sigma)
  
 def grad1_li(zi, sigma, r_i, gamma_i, beta_i):
+    """Gradient of the local cost with respect to zi."""
     return 2.0 * gamma_i * (zi - r_i) + 2.0 * beta_i * (zi - sigma)
  
 def grad2_li(zi, sigma, beta_i):
+    """Gradient of the local cost with respect to sigma."""
     return -2.0 * beta_i * (zi - sigma)
 
 def phi(z_i):
+    """Identity mapping for the state."""
     return z_i
 
 def grad_phi(z_i):
+    """Gradient of the identity mapping is just the identity matrix."""
     return 1.0
 
 # --- CBF-QP Filter ---
 def cbf_qp_filter(z_i, u_nom, obstacles, d_safe, gamma_cbf):
-    if len(obstacles) == 0:
+    """Applies a CBF-QP filter to ensure safety with respect to obstacles."""
+    if len(obstacles) == 0: # No obstacles, return nominal control
         return u_nom
 
-    diff = z_i[None, :] - obstacles
-    grad_V = 2.0 * diff
-    A = -grad_V
+    diff = z_i[None, :] - obstacles # (num_obstacles, 2)
+    grad_V = 2.0 * diff # Gradient of the CBF: V = sum((z_i - obs_j)^2) - d_safe^2
+    A = -grad_V 
     b = gamma_cbf * (np.sum(diff**2, axis=1) - d_safe**2)
 
-    def objective(u): return np.sum((u - u_nom)**2)
-    def jacobian(u): return 2 * (u - u_nom)
+    def objective(u): return np.sum((u - u_nom)**2) # Quadratic cost to stay close to nominal control
+    def jacobian(u): return 2 * (u - u_nom) # Gradient of the objective
 
     constraints = LinearConstraint(A, -np.inf, b)
     res = minimize(objective, np.copy(u_nom), method='SLSQP', jac=jacobian, 
-                   constraints=constraints, options={'ftol': 1e-9, 'disp': False})
+                   constraints=constraints, options={'ftol': 1e-9, 'disp': False}) # Suppress output and set tight tolerance
 
     if res.success:
-        return res.x
+        return res.x # Return the optimized control input that satisfies the safety constraints
     else:
         return np.zeros(2) # Emergency stop
 
 class Agent(Node):
+    """ROS2 Node representing a single agent in the distributed optimization algorithm."""
     def __init__(self):
         super().__init__("safety_agent", allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
         
@@ -91,16 +98,16 @@ class Agent(Node):
 
     def timer_callback(self):
         msg = MsgFloat()
-
+        # First iteration: publish initial state without update
         if self.k == 0:  
-            if self.publisher.get_subscription_count() < len(self.neighbors):
+            if self.publisher.get_subscription_count() < len(self.neighbors): # Wait until all neighbors are subscribed before publishing
                 return
             raw_data = [self.agent_id, self.k, *self.z, *self.s, *self.v]
             msg.data = [float(val) for val in raw_data]
             self.publisher.publish(msg)
             self.k += 1
 
-        else:
+        else: # Check if we have received messages from all neighbors for the previous iteration
             if all(len(self.received_data[j]) > 0 for j in self.neighbors):
                 if all(self.k - 1 == int(self.received_data[j][0][0]) for j in self.neighbors):
 
@@ -134,10 +141,10 @@ class Agent(Node):
                     self.publisher.publish(msg)
 
                     self.k += 1
-                    if self.k > self.maxK:
+                    if self.k > self.maxK: #Stop after maxK iterations 
                         if self.k == self.maxK + 1:
                             self.get_logger().info("Max iters reached.")
-                            self.k += 1 
+                            self.k += 1 # Ensure this message is only printed once
                         return
 
 def main(args=None):
@@ -149,7 +156,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass # Catch the Ctrl+C silently
     finally:
-        agent.destroy_node() # Now this always runs!
+        agent.destroy_node() 
         rclpy.shutdown()
 
 if __name__ == "__main__":

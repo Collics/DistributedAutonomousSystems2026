@@ -16,12 +16,11 @@ from plots import plot_task_1_2_datasets, plot_task_1_2_metrics, plot_task_1_2_b
 
 def phi_parabola(X):
     """ϕ(x) = [x1, x2, x1²]"""
-    # X[..., 0] prende il primo elemento (la coordinata x1) a prescindere 
-    # che X sia un array 1D (un punto) o una matrice 2D (tanti punti).
+    # X[..., 0] takes first element (the x1 coordinate)  
     x1 = X[..., 0]
     x2 = X[..., 1]
     
-    # np.stack con axis=-1 ricompone i dati mantenendo le dimensioni corrette
+    # np.stack with axis=-1 recomposes the data maintaining the correct dimensions
     return np.stack([x1, x2, x1 ** 2], axis=-1)
  
  
@@ -35,6 +34,25 @@ def phi_hyperbola(X):
 # 2.  Dataset generation
 # ─────────────────────────────────────────────
 def generate_dataset(X, w, b, phi_fn):
+    """
+    Generates binary labels for a dataset using a linear classifier
+    in the transformed feature space.
+    Given a feature mapping phi_fn, the decision rule is:
+        label = +1  if  phi(x) @ w + b >= 0
+        label = -1  otherwise
+
+    X      : ndarray of shape (M, d)
+             Input data points in the original space.
+    w      : array-like of shape (q,)
+             Weight vector in the transformed feature space.
+    b      : float
+             Bias (intercept) term.
+    phi_fn : callable
+             Feature mapping R^d -> R^q (e.g. phi_parabola, phi_hyperbola).
+    
+    labels : ndarray of shape (M,) with values in {+1, -1}
+             Binary class labels for each input point.
+    """
     w = np.array(w)
 
     Phi = phi_fn(X)
@@ -77,6 +95,19 @@ def logistic_grad(wb, Phi, labels):
 # ──────────────────────────────────────────────────────────────
 
 def centralized_gradient_descent(X, Phi, labels, stepsize, max_iter, seed=0, tol=1e-8):
+    '''Performs centralized gradient descent to minimize logistic loss.
+    X        : (M, d) input data points
+    Phi      : (M, q) mapped features
+    labels   : (M,) binary class labels
+    stepsize : float, step size for gradient descent
+    max_iter : int, maximum number of iterations
+    seed     : int, random seed for initialization
+    tol      : float, tolerance for convergence
+    Returns:
+    wb       : (q+1,) learned parameters [w; b]
+    cost_hist : list of logistic loss values at each iteration
+    grad_norm_hist : list of gradient norms at each iteration
+    '''
     Phi = np.array([Phi(x) for x in X]) # (M, q)
 
     q_dim   = Phi.shape[1]

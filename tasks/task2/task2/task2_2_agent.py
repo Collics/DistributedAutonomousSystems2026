@@ -5,22 +5,28 @@ import numpy as np
 from time import sleep
 
 def local_cost(zi, sigma, r_i, gamma_i, beta_i):
+    """Local cost function for agent i."""
     return gamma_i * np.dot(zi - r_i, zi - r_i) + beta_i * np.dot(zi - sigma, zi - sigma)
  
 def grad1_li(zi, sigma, r_i, gamma_i, beta_i):
+    """Gradient of the local cost with respect to zi."""
     return 2.0 * gamma_i * (zi - r_i) + 2.0 * beta_i * (zi - sigma)
  
 def grad2_li(zi, sigma, beta_i):
+    """Gradient of the local cost with respect to sigma."""
     return -2.0 * beta_i * (zi - sigma)
 
 def phi(z_i):
+    """Identity mapping for the state."""
     return z_i
 
 def grad_phi(z_i):
+    """Gradient of the identity mapping is just the identity matrix."""
     return 1.0
 
 
 class Agent(Node):
+    """ROS2 Node representing a single agent in the distributed optimization algorithm."""
     def __init__(self):
         super().__init__(
             "parametric_agent",
@@ -53,7 +59,7 @@ class Agent(Node):
         self.s = phi(self.z)
         self.v = grad2_li(self.z, self.s, self.beta) # Updated
 
-        # Setup Comunication
+        # Setup Comunication 
         for j in self.neighbors:
             self.create_subscription(
                 MsgFloat,
@@ -61,9 +67,9 @@ class Agent(Node):
                 self.listener_callback,
                 1000,
             )
-
+        # Buffer to store received messages from neighbors, indexed by neighbor ID
         self.received_data = {j: [] for j in self.neighbors}
-
+        # Publisher for this agent's state
         self.publisher = self.create_publisher(
             MsgFloat,
             f"/topic_{self.agent_id:.0f}",
@@ -85,29 +91,30 @@ class Agent(Node):
     def timer_callback(self):
         """ When all the msg have arrived, do the update """
         msg = MsgFloat()
-
+        # First iteration: publish initial state without update 
         if self.k == 0:  
-            if self.publisher.get_subscription_count() < len(self.neighbors):
+            if self.publisher.get_subscription_count() < len(self.neighbors):# Wait until all neighbors are subscribed before publishing
                 return
                 
             # First Iteration with initial state
             raw_data = [self.agent_id, self.k, *self.z, *self.s, *self.v]
             msg.data = [float(val) for val in raw_data] 
             self.publisher.publish(msg)
-            self.k += 1
+            self.k += 1  # Increment iteration counter after publishing initial state
 
         else:
-            all_received = False
+            # Check if we have received messages from all neighbors for the previous iteration
+            all_received = False 
             if all(len(self.received_data[j]) > 0 for j in self.neighbors):
                 all_received = all(
                     self.k - 1 == int(self.received_data[j][0][0]) for j in self.neighbors
-                )
+                )# Ensure that the received messages correspond to the previous iteration (k-1)
                 
-            if all_received:
+            if all_received: # If we have all the messages, we can proceed with the update
                 s_new = self.self_weight * self.s
                 v_new = self.self_weight * self.v
                 
-                for j in self.neighbors:
+                for j in self.neighbors: # Iterate over neighbors to compute the weighted sum of their states
                     msg_j = self.received_data[j].pop(0) 
                     
                     s_j = np.array([msg_j[3], msg_j[4]]) 

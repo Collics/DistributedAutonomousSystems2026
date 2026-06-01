@@ -8,6 +8,7 @@ import task2.task_config as cfg
 import sys
 
 class CentralVisualizer(Node):
+    """ROS2 Node that subscribes to all agent topics, visualizes their states in real-time, and generates final convergence plots at the end of the simulation."""
     def __init__(self):
         super().__init__('central_visualizer', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
         

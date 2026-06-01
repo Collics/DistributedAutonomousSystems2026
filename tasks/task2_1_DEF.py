@@ -6,18 +6,23 @@ import Parameters as par
 from graph_utils import get_graph_and_matrix
 
 def phi(z_i):
+    """Identity mapping for the state."""
     return z_i
 
 def grad_phi(z_i):
+    """Gradient of the identity mapping is just the identity matrix."""
     return 1.0
 
 def local_cost(zi, sigma, r_i, gamma_i, beta_i):
+    """Local cost function for agent i."""
     return gamma_i * np.dot(zi - r_i, zi - r_i) + beta_i * np.dot(zi - sigma, zi - sigma)
 
 def grad1_li(zi, sigma, r_i, gamma_i, beta_i):
+    """Gradient of the local cost with respect to zi."""
     return 2.0 * gamma_i * (zi - r_i) + 2.0 * beta_i * (zi - sigma)
 
 def grad2_li(zi, sigma, beta_i):
+    """Gradient of the local cost with respect to sigma."""
     return -2.0 * beta_i * (zi - sigma)
 
 def generate_safe_initial_positions(N, box_size=5.0, min_dist=0.5, offset_x=0.0, offset_y=0.0):
@@ -49,6 +54,14 @@ def generate_safe_initial_positions(N, box_size=5.0, min_dist=0.5, offset_x=0.0,
     return z0
 
 def generate_target_geometry(N, shape='hexagon', scale=3.0, center=[6.0, 6.0]):
+    """Generates target positions for the robots based on the specified shape.
+    N     : number of target positions (should match number of robots)
+    shape : string, one of 'hexagon', 'line', 'triangle'
+    scale : float, size of the shape (e.g., radius for hexagon)
+    center: list or array, (x, y) coordinates of the shape's center
+    Returns:
+    r_targets : (N, 2) array of target positions
+    """
     targets = np.zeros((N, 2))
     center = np.array(center)
     
@@ -79,6 +92,7 @@ def generate_target_geometry(N, shape='hexagon', scale=3.0, center=[6.0, 6.0]):
     return targets
 
 def _compute_metrics(z, r_targets, gamma, beta, N, max_iters):
+    """Computes cost, gradient norm, consensus error, and sigma error over iterations."""
     cost = np.zeros(max_iters)
     grad_norm = np.zeros(max_iters)
     consensus = np.zeros(max_iters)

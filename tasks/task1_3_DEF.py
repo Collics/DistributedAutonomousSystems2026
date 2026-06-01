@@ -86,6 +86,13 @@ def global_logistic_metrics(z_matrix, X_global, labels_global, phi_fn):
     """
     Evaluates global cost and gradient norm at the consensus mean z_bar.
     z_matrix : (N, q+1)
+    X_global  : (M, d) all data points
+    labels_global : (M,) all labels
+    phi_fn   : feature mapping function
+    Returns:
+    - total_cost : scalar logistic loss at z_bar
+    - grad_norm  : scalar norm of the global gradient at z_bar
+    - z_bar      : (q+1,) consensus mean of the agents' parameters
     """
     z_bar = np.mean(z_matrix, axis=0)                              # (q+1,)
  
@@ -108,6 +115,12 @@ def global_logistic_metrics(z_matrix, X_global, labels_global, phi_fn):
 
 #  Single experiment run
 def run_ev(X, labels, phi_fn, mapping):
+    """Runs one experiment for a given dataset and feature mapping.
+    X      : (M, d) dataset
+    labels : (M,) binary labels
+    phi_fn : feature mapping function
+    mapping : string name of the mapping (for plotting)
+    """
     N = par.TASK_1_3_N
     stepsize = par.TASK_1_3_STEPSIZE
     max_iter = par.TASK_1_3_MAX_ITER

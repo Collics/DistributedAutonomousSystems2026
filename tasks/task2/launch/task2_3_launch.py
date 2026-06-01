@@ -7,6 +7,7 @@ import task2.task_config as cfg
 import numpy as np
 
 def generate_launch_description():
+    """Launch file for Task 2.3: Distributed CBF-QP with Obstacle Avoidance."""
     
     launch_dir = os.path.dirname(os.path.realpath(__file__))
     data_dir = os.path.abspath(os.path.join(launch_dir, '..', 'task2', 'data'))
