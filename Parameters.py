@@ -91,7 +91,7 @@ TASK_1_3_METRICS = True
 ###############
 # TASK 2.1
 ###############
-RUN_TASK_2_1 = True
+RUN_TASK_2_1 = False
 
 TASK_2_1_N        = 6          # Number of robots
 TASK_2_1_ALPHA    = 0.01       # Step size
@@ -121,20 +121,38 @@ TASK_2_1_GRAPH = 'cycle'  # Fixed graph type to use for other experiments (param
 # Animation Flag
 TASK_2_1_ANIMATE = True
 
+
 ###############
 # TASK 2.3
 ###############
-RUN_TASK_2_3 = False
+RUN_TASK_2_3 = True
 
 TASK_2_3_N = 6                # Number of agents
-TASK_2_3_MAX_ITER = 500      # Iterations
+TASK_2_3_MAX_ITER = 500       # Iterations
 TASK_2_3_ALPHA = 0.01         # Step size (alpha)
-TASK_2_3_GAMMA = 1.0          # Weight for private target tracking
-TASK_2_3_BETA = 0.1           # Weight for formation tracking
-
-TASK_2_3_GRAPH = "cycle"      # 'cycle' | 'path' | 'star'
-TASK_2_3_GAMMA_CBF = 0.5     # CBF safety parameter
 TASK_2_3_D_SAFE = 1.0         # Safety distance from obstacle centers
-TASK_2_3_OBSTACLES = [[0.0, 2.0], [1.0, -2.0]]  # Center coordinates of obstacles
-TASK_2_3_PLOTS = True
-TASK_2_3_ANIMATION = True
+
+TASK_2_3_EXP_DIR = "figs/Task2_3_Experiments"  # Output directory for plots and GIFs
+TASK_2_3_ANIMATE = True
+
+# Fixed Tracking Parameters across ALL Task 2.3 experiments
+TASK_2_3_PARAM = (2.0, 0.1)  # (gamma, beta) 
+
+# --- EXPERIMENT 1: CBF Parameter Tuning (gamma_cbf) ---
+TASK_2_3_EXP1_GCBF = [0.1, 1.0, 4.0]
+TASK_2_3_EXP1_LABELS = ["Conservative", "Balanced", "Aggressive"]
+TASK_2_3_GCBF = 1.0  # Fixed CBF param to use for other experiments (geometry & graph)
+
+# --- EXPERIMENT 2: Obstacle Geometries ---
+TASK_2_3_EXP2_OBSTACLES = [
+    [[0.0, 2.0], [2.0, -2.0]],                   
+    [[0.0, 0.0]],                                
+    [[2.0, 1.5], [2.0, -1.5], [2.0, 0.0]]        
+]
+TASK_2_3_EXP2_LABELS = ["Standard", "Center_Block", "Wall"]
+TASK_2_3_OBSTACLES = [[0.0, 2.0], [2.0, -2.0]] # Fixed obstacle layout for other experiments
+
+# --- EXPERIMENT 3: Network Topologies ---
+TASK_2_3_EXP3_GRAPHS = ['cycle', 'path', 'star']
+TASK_2_3_EXP3_LABELS = ["Cycle", "Path", "Star"]
+TASK_2_3_GRAPH = 'cycle'  # Fixed graph type for other experiments

@@ -150,7 +150,7 @@ class Agent(Node):
 def main(args=None):
     rclpy.init(args=args)
     agent = Agent()
-    sleep(5.0)
+    sleep(3.0)
     try:
         rclpy.spin(agent)
     except KeyboardInterrupt:

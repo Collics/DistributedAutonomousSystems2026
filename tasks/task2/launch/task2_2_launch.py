@@ -1,6 +1,11 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
+
+from launch.actions import RegisterEventHandler, EmitEvent
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
+
 import numpy as np
 import os
 import task2.task_config as cfg
@@ -54,16 +59,23 @@ def generate_launch_description():
         )
 
     # Launch Central Visualizer Node
+    viz_node = Node(
+        package=package_name,
+        executable="central_visualizer",
+        name="central_viz",
+        parameters=[viz_params],
+        output="screen",
+    )
+    node_list.append(viz_node)
+    
     node_list.append(
-        Node(
-            package=package_name,
-            executable="central_visualizer",
-            name="central_viz",
-            parameters=[viz_params],
-            output="screen",
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=viz_node,
+                on_exit=[EmitEvent(event=Shutdown())],
+            )
         )
     )
-    
     # Delete the old bag folder if it already exists
     if os.path.exists(bag_name):
         print(f"Overwriting old bag: {bag_name}")

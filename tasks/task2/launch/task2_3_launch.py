@@ -5,6 +5,10 @@ from launch.actions import ExecuteProcess
 import os
 import task2.task_config as cfg
 import numpy as np
+from launch.actions import RegisterEventHandler, EmitEvent
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
+
 
 def generate_launch_description():
     """Launch file for Task 2.3: Distributed CBF-QP with Obstacle Avoidance."""
@@ -58,12 +62,23 @@ def generate_launch_description():
         )
 
     # Launch Central Visualizer Node
+    viz_node = Node(
+        package=package_name,
+        executable="central_visualizer",
+        name="central_viz",
+        parameters=[viz_params],
+        output="screen"
+    )
+    node_list.append(viz_node)
+
+    # NEW: When the visualizer shuts down, kill the entire launch process!
     node_list.append(
-        Node(package=package_name,
-             executable="central_visualizer",
-             name="central_viz",
-             parameters=[viz_params],
-             output="screen")
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=viz_node,
+                on_exit=[EmitEvent(event=Shutdown())]
+            )
+        )
     )
 
     

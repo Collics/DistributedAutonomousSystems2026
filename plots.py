@@ -971,3 +971,68 @@ def plot_task2_3_safety(nominal, safe, title=None):
 
     fig.tight_layout()
     return fig
+
+import matplotlib.gridspec as gridspec
+
+def plot_task2_3_unified(nominal, safe):
+    """Generates a single comprehensive dashboard for Task 2.3 metrics."""
+    fig = plt.figure(figsize=(14, 16))
+    gs = gridspec.GridSpec(3, 2, height_ratios=[1.5, 1, 1], hspace=0.3)
+
+    # --- ROW 1: Trajectories (Spans both columns) ---
+    ax_traj = fig.add_subplot(gs[0, :])
+    for i in range(nominal['z'].shape[1]):
+        ax_traj.plot(nominal['z'][:, i, 0], nominal['z'][:, i, 1], 'k--', alpha=0.4, label='Nominal' if i==0 else "")
+    for i in range(safe['z'].shape[1]):
+        ax_traj.plot(safe['z'][:, i, 0], safe['z'][:, i, 1], lw=2.5, label=f'Safe R{i}')
+    
+    for obs in safe['obstacles']:
+        ax_traj.add_patch(plt.Circle(obs, safe['d_safe'], color='tab:red', alpha=0.3))
+        ax_traj.plot(obs[0], obs[1], 'rx')
+    for tar in safe['targets']:
+        ax_traj.plot(tar[0], tar[1], 'bx', markersize=10, markeredgewidth=2)
+        
+    ax_traj.set_title("Trajectory Deflection (Nominal vs Safe)", fontsize=14, fontweight='bold')
+    ax_traj.set_aspect('equal')
+    ax_traj.grid(True, alpha=0.5)
+    ax_traj.legend(loc='upper right', fontsize=10)
+
+    # --- ROW 2: Safety Metrics ---
+    ax_clear = fig.add_subplot(gs[1, 0])
+    ax_clear.plot(nominal['min_clearance'], 'k--', label='Nominal')
+    ax_clear.plot(safe['min_clearance'], 'tab:blue', lw=2.5, label='Safe')
+    ax_clear.axhline(0, color='red', linestyle=':', lw=2, label='Collision Threshold')
+    ax_clear.set_title("Minimum Clearance", fontsize=12, fontweight='bold')
+    ax_clear.set_xlabel("Iteration")
+    ax_clear.grid(True, alpha=0.5)
+    ax_clear.legend()
+
+    ax_cbf = fig.add_subplot(gs[1, 1])
+    ax_cbf.plot(nominal['min_cbf_value'], 'k--', label='Nominal')
+    ax_cbf.plot(safe['min_cbf_value'], 'tab:green', lw=2.5, label='Safe')
+    ax_cbf.axhline(0, color='red', linestyle=':', lw=2, label='CBF Boundary')
+    ax_cbf.set_title("Minimum CBF Value $V(z)$", fontsize=12, fontweight='bold')
+    ax_cbf.set_xlabel("Iteration")
+    ax_cbf.grid(True, alpha=0.5)
+    ax_cbf.legend()
+
+    # --- ROW 3: Convergence Metrics ---
+    ax_cost = fig.add_subplot(gs[2, 0])
+    ax_cost.plot(nominal['cost_history'], 'k--', label='Nominal')
+    ax_cost.plot(safe['cost_history'], 'tab:orange', lw=2.5, label='Safe')
+    ax_cost.set_yscale('log')
+    ax_cost.set_title("Global Cost $J(z, \sigma)$", fontsize=12, fontweight='bold')
+    ax_cost.set_xlabel("Iteration")
+    ax_cost.grid(True, alpha=0.5)
+    ax_cost.legend()
+
+    ax_grad = fig.add_subplot(gs[2, 1])
+    ax_grad.plot(nominal['grad_norm_history'], 'k--', label='Nominal')
+    ax_grad.plot(safe['grad_norm_history'], 'tab:purple', lw=2.5, label='Safe')
+    ax_grad.set_yscale('log')
+    ax_grad.set_title("Gradient Norm $\|\nabla J\|$", fontsize=12, fontweight='bold')
+    ax_grad.set_xlabel("Iteration")
+    ax_grad.grid(True, alpha=0.5)
+    ax_grad.legend()
+
+    return fig

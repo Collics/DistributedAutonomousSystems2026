@@ -4,8 +4,10 @@ from std_msgs.msg import Float32MultiArray as MsgFloat
 from visualization_msgs.msg import Marker
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import task2.task_config as cfg
 import sys
+import matplotlib.animation as animation
 
 class CentralVisualizer(Node):
     """ROS2 Node that subscribes to all agent topics, visualizes their states in real-time, and generates final convergence plots at the end of the simulation."""
@@ -47,11 +49,8 @@ class CentralVisualizer(Node):
     
     def listener_callback(self, msg):
         agent_id = int(msg.data[0])
-        # msg.data layout: [agent_id, k, zx, zy, sx, sy, vx, vy]
         x, y = float(msg.data[2]), float(msg.data[3])
         self.agent_positions[agent_id] = np.array([x, y])
-        
-        # Save the full state history for post-simulation analysis (cost, gradient norms, consensus)
         self.history.append(list(msg.data)) 
 
         self.rviz_pub.publish(self._make_marker(agent_id + 200, 'agents', x, y, Marker.SPHERE, [1.0, 0.0, 1.0, 1.0], 0.4))
@@ -96,21 +95,74 @@ class CentralVisualizer(Node):
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
             
-            # when maxK is reached, stop the simulation and auto-generate final plots
             if current_k >= cfg.maxK - 1:
                 self.finished = True
                 self.get_logger().info(f"Target of {cfg.maxK} iterations reached! Auto-generating final plots...")
                 self.save_data()
         except Exception:
-            # Ignore GUI crashes during shutdown!
             pass
+
+    def _create_and_save_animation(self, z_hist, max_k):
+        self.get_logger().info("Rendering trajectory animation... (This might take a moment)")
+        
+        fig_anim, ax_anim = plt.subplots(figsize=(8, 8))
+        ax_anim.set_xlim(-12, 12)
+        ax_anim.set_ylim(-10, 10)
+        ax_anim.set_aspect('equal')
+        ax_anim.set_title(f"Trajectory Animation - {self.plot_title}")
+        ax_anim.grid(True, linestyle=":", alpha=0.6)
+
+        if self.obstacles.size > 0:
+            for obs in self.obstacles:
+                ax_anim.add_patch(plt.Circle(obs, self.d_safe, color='tab:orange', alpha=0.3))
+                ax_anim.plot(obs[0], obs[1], 'rx')
+
+        for i in range(self.NN):
+            target = self.targets[i]
+            ax_anim.plot(target[0], target[1], 'bx', markersize=10)
+
+        cmap = plt.get_cmap("tab10")
+        colors = [cmap(i / max(self.NN - 1, 1)) for i in range(self.NN)]
+        
+        robots_scatter = ax_anim.scatter(z_hist[0, :, 0], z_hist[0, :, 1], c=colors, s=80, zorder=5, edgecolors='k')
+        tails = [ax_anim.plot([], [], color=colors[i], alpha=0.5, linewidth=1.5)[0] for i in range(self.NN)]
+
+        def init():
+            robots_scatter.set_offsets(np.empty((0, 2)))
+            for tail in tails:
+                tail.set_data([], [])
+            return [robots_scatter] + tails
+
+        def update(frame):
+            robots_scatter.set_offsets(z_hist[frame])
+            tail_length = 30
+            start_idx = max(0, frame - tail_length)
+            for i in range(self.NN):
+                tails[i].set_data(z_hist[start_idx:frame+1, i, 0], z_hist[start_idx:frame+1, i, 1])
+            return [robots_scatter] + tails
+
+        skip = max(1, max_k // 200)
+        frames = np.arange(0, max_k, skip)
+        if frames[-1] != max_k - 1:
+            frames = np.append(frames, max_k - 1)
+
+        anim = animation.FuncAnimation(fig_anim, update, frames=frames, init_func=init, blit=True, interval=50)
+        
+        anim_path = self.save_name.replace('.npy', '.gif')
+        try:
+            anim.save(anim_path, writer='pillow', fps=20)
+            self.get_logger().info(f"[SUCCESS] Animation securely saved to: {anim_path}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to save animation: {e}")
+        
+        plt.close(fig_anim)
 
     def save_data(self):
         raw_history = np.array(self.history)
         np.save(self.save_name, raw_history)
         
-        plt.ioff()  # Turn off live interactive mode
-        plt.close(self.fig) # Safely destroy the live window
+        plt.ioff()
+        plt.close(self.fig) 
         
         if len(raw_history) == 0: return
 
@@ -130,6 +182,8 @@ class CentralVisualizer(Node):
                 if np.array_equal(s_hist[k, i], [0.0, 0.0]):
                     s_hist[k, i] = s_hist[k-1, i]
 
+        self._create_and_save_animation(z_hist, max_k)
+
         cost = np.zeros(max_k)
         grad_norm = np.zeros(max_k)
 
@@ -145,54 +199,83 @@ class CentralVisualizer(Node):
             cost[k] = c_val
             grad_norm[k] = np.sqrt(g_val)
 
-        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-        fig.suptitle(f"ROS 2 Convergence Metrics  |  Iters: {max_k-1}", fontsize=14, fontweight="bold")
-        
-        axes[0,0].plot(cost, lw=2.5, color='tab:blue')
-        axes[0,0].set_title(r"Global Cost $J(z, \sigma)$")
-        axes[0,0].set_yscale('log')
-        
-        axes[0,1].plot(grad_norm, lw=2.5, color='tab:orange')
-        axes[0,1].set_title(r"Gradient Norm $\|\nabla J\|$ (Log)")
-        axes[0,1].set_yscale('log')
+        # NEW DASHBOARD LAYOUT (Mirrors Python exactly)
+        fig = plt.figure(figsize=(14, 16))
+        gs = gridspec.GridSpec(3, 2, height_ratios=[1.5, 1, 1], hspace=0.3)
+        fig.suptitle(f"ROS 2 Convergence Metrics  |  Iters: {max_k-1}", fontsize=16, fontweight="bold")
 
+        # --- ROW 1: Trajectories (Spans both columns) ---
+        ax_traj = fig.add_subplot(gs[0, :])
         cmap = plt.get_cmap("tab10")
+        
+        if self.obstacles.size > 0:
+            for obs in self.obstacles:
+                ax_traj.add_patch(plt.Circle(obs, self.d_safe, color='tab:red', alpha=0.3))
+                ax_traj.plot(obs[0], obs[1], 'rx')
+
         for i in range(self.NN):
-            color = cmap(i)
-            axes[1,0].plot(s_hist[:, i, 0], color=color, alpha=0.8, label=f'R{i}')
-            axes[1,1].plot(s_hist[:, i, 1], color=color, alpha=0.8)
-
-        axes[1,0].set_title(r"Barycenter Estimate Consensus ($s_x$)")
-        axes[1,1].set_title(r"Barycenter Estimate Consensus ($s_y$)")
-        axes[1,0].legend(loc='best', fontsize=8)
-
-        for ax in axes.flat:
-            ax.grid(True, which="both", alpha=0.4)
-            ax.set_xlabel("Iteration $k$")
+            color = cmap(i / max(self.NN - 1, 1))
+            ax_traj.plot(z_hist[:, i, 0], z_hist[:, i, 1], color=color, lw=2.5, label=f'R{i}')
+            ax_traj.plot(z_hist[0, i, 0], z_hist[0, i, 1], 'o', color=color)
+            ax_traj.plot(self.targets[i][0], self.targets[i][1], 'bx', markersize=10, markeredgewidth=2)
             
-        plt.tight_layout(h_pad=2.5)
+        ax_traj.set_title("Trajectory Deflection", fontsize=14, fontweight='bold')
+        ax_traj.set_aspect('equal')
+        ax_traj.grid(True, alpha=0.5)
+        ax_traj.legend(loc='upper right', fontsize=10)
+
+        # --- ROW 2: Consensus Metrics ---
+        ax_sx = fig.add_subplot(gs[1, 0])
+        ax_sy = fig.add_subplot(gs[1, 1])
+        for i in range(self.NN):
+            color = cmap(i / max(self.NN - 1, 1))
+            ax_sx.plot(s_hist[:, i, 0], color=color, alpha=0.8, label=f'R{i}')
+            ax_sy.plot(s_hist[:, i, 1], color=color, alpha=0.8)
+
+        ax_sx.set_title(r"Barycenter Estimate Consensus ($s_x$)", fontsize=12, fontweight='bold')
+        ax_sx.set_xlabel("Iteration $k$")
+        ax_sx.grid(True, alpha=0.5)
+        ax_sx.legend(loc='best', fontsize=8)
+
+        ax_sy.set_title(r"Barycenter Estimate Consensus ($s_y$)", fontsize=12, fontweight='bold')
+        ax_sy.set_xlabel("Iteration $k$")
+        ax_sy.grid(True, alpha=0.5)
+
+        # --- ROW 3: Convergence Metrics ---
+        ax_cost = fig.add_subplot(gs[2, 0])
+        ax_cost.plot(cost, lw=2.5, color='tab:blue')
+        ax_cost.set_title(r"Global Cost $J(z, \sigma)$", fontsize=12, fontweight='bold')
+        ax_cost.set_yscale('log')
+        ax_cost.set_xlabel("Iteration $k$")
+        ax_cost.grid(True, alpha=0.5)
+
+        ax_grad = fig.add_subplot(gs[2, 1])
+        ax_grad.plot(grad_norm, lw=2.5, color='tab:orange')
+        ax_grad.set_title(r"Gradient Norm $\|\nabla J\|$", fontsize=12, fontweight='bold')
+        ax_grad.set_yscale('log')
+        ax_grad.set_xlabel("Iteration $k$")
+        ax_grad.grid(True, alpha=0.5)
+
+        fig.subplots_adjust(top=0.92)
         
         image_path = self.save_name.replace('.npy', '.png')
-        plt.savefig(image_path, dpi=300, bbox_inches='tight')
+        fig.savefig(image_path, dpi=300, bbox_inches='tight')
         
-        self.get_logger().info(f"[SUCCESS] High-res plot securely saved to: {image_path}")
-        self.get_logger().info("--> Close the Matplotlib window to exit the simulation! <--")
+        self.get_logger().info(f"[SUCCESS] High-res dashboard securely saved to: {image_path}")
+        self.get_logger().info("--> Auto-closing in 2 seconds to continue batch... <--")
         
-        plt.show(block=True)
-        
-        # Kill the ROS 2 node cleanly when the user manually closes the graph window
+        plt.show(block=False)
+        plt.pause(2.0)
         sys.exit(0)
         
-
 def main(args=None):
     rclpy.init(args=args)
     viz = CentralVisualizer()
     try:
         rclpy.spin(viz)
     except SystemExit:
-        pass # Expected exit when the user closes the final plot window
+        pass 
     except KeyboardInterrupt:
-        # Fallback: If you hit Ctrl+C early, it intercepts and generates the plot safely anyway!
         if not viz.finished:
             viz.finished = True
             viz.get_logger().info("Simulation stopped early! Generating final metrics...")
