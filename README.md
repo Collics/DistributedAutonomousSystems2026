@@ -285,7 +285,7 @@ ros2 bag play tasks/task2/task2/data/task2_2_bag
 ros2 bag play tasks/task2/task2/data/task2_3_bag
 ```
 
-> ⚠️ Make sure `OBSTACLES` in `task_config.py` matches the task you are replaying (`False` for Task 2.2, `True` for Task 2.3).
+>  Make sure `OBSTACLES` in `task_config.py` matches the task you are replaying (`False` for Task 2.2, `True` for Task 2.3).
 
 ---
 
